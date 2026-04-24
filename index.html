@@ -66,7 +66,7 @@ body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse
 .rating-item{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
 .rating-text{font-size:13px;line-height:1.5;color:var(--text);margin-bottom:10px}
 .rating-row{display:flex;gap:5px}
-.r-btn{flex:1;padding:7px 2px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.r-btn{flex:1;min-height:44px;padding:4px 2px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
 .r-btn:hover{border-color:rgba(255,255,255,0.2);color:var(--text)}
 .r-btn.sel{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3);color:#fff}
 .r-labels{display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
@@ -271,104 +271,113 @@ function p(playerText, coachText){ return whoMode==='coach' ? coachText : player
 function getQuestions(){
   return [
     // Q1 — Rating 1-5
+    // Technique: behavioral specificity over archetype philosophy — harder to map to a label
     {part:"Part 1 — Beliefs",
      text: p("Rate how much you agree with each statement about how football is won.",
              "Rate how much each statement reflects how this player naturally sees the game."),
      sub:"1 = strongly disagree · 5 = strongly agree",
      type:"rating",
      statements:[
-       {text:"Games are won through individual moments of skill, creativity and the courage to attempt something others wouldn't.",arch:"M"},
-       {text:"Games are won by the team that makes better decisions, controls tempo and forces opponents into unfavourable situations.",arch:"C"},
-       {text:"Games are won by desire, intensity and sheer refusal to be outworked — the team that wants it more always has a chance.",arch:"W"},
+       {text:"The most important player in a tight game is the one willing to try something others won't — somebody has to take responsibility for creating the moment.",arch:"M"},
+       {text:"The team that consistently makes better decisions under pressure has a structural advantage — individual quality means nothing without the right choices.",arch:"C"},
+       {text:"Any team that genuinely refuses to be beaten will find a way — desire and intensity are the one thing no opponent can fully prepare for.",arch:"W"},
      ]},
 
     // Q2 — Rating 1-5
+    // Technique: specific scenario over abstract value statement
     {part:"Part 1 — Beliefs",
      text: p("Rate how much you agree with each statement.",
              "Rate how much these apply to this player."),
      sub:"1 = strongly disagree · 5 = strongly agree",
      type:"rating",
      statements:[
-       {text: p("A player who loses the ball trying something special has done nothing wrong — you have to attempt things to create moments.",
-               "A player who loses the ball going for something special has done nothing wrong — you have to try things to create moments."), arch:"M"},
-       {text: p("Losing the ball through a poor decision is one of the most costly things you can do — good decisions protect everything.",
-               "Poor decision-making is the most damaging thing this player can do — decisions protect the whole team."), arch:"C"},
-       {text: p("Losing the ball is fine as long as you immediately do everything to win it back — reaction matters more than the mistake.",
-               "Losing the ball is acceptable as long as the reaction is immediate — effort to win it back matters most."), arch:"W"},
+       {text: p("A player backing themselves to make something happen and losing the ball hasn't done anything wrong — you can't create without attempting.",
+               "A player backing themselves to make something happen and losing the ball hasn't done anything wrong — you can't create without attempting."), arch:"M"},
+       {text: p("Losing the ball through a poor decision is one of the most damaging things you can do — wrong choices put the whole team under pressure.",
+               "Poor decision-making that gives the ball away is one of the most damaging habits a player can have — it puts the whole team under pressure."), arch:"C"},
+       {text: p("Losing the ball only becomes a problem when you don't immediately fight to win it back — the mistake matters far less than the reaction.",
+               "Losing the ball only becomes a problem when the player doesn't immediately fight to win it back — the mistake matters far less than the reaction."), arch:"W"},
      ]},
 
     // Q3 — MC
+    // Technique: attention framing — what you scan for reveals identity more honestly than what you claim to value
     {part:"Part 2 — Instincts",
-     text: p("Your team is losing 1-0 with 15 minutes left. What does your gut tell you needs to happen?",
-             "The team is losing 1-0 with 15 minutes left. What would this player's gut tell them?"),
+     text: p("Your team is losing 1-0 with 15 minutes left. What's going through your head?",
+             "The team is losing 1-0 with 15 minutes left. What's going through this player's head?"),
      sub:"",type:"mc",
      choices:[
-       {t: p("Someone needs to take a risk — we need a moment of individual quality","Someone needs to take a risk — a moment of individual quality is needed"), a:"M"},
-       {t: p("Work it open smartly — don't give away a cheap goal on the counter","Work it open smartly — don't concede cheaply chasing the game"), a:"C"},
-       {t: p("Want it more — outfight them, outrun them, refuse to lose","Win the physical battle — outwork and outfight until something gives"), a:"W"},
+       {t: p("Back yourself — someone needs to take it on and make something happen","Back themselves — someone needs to take it on and make something happen"), a:"M"},
+       {t: p("Stay composed — keep it moving, work it open, the right moment comes if we don't panic","Stay composed — keep it moving, work it open, the right moment comes if the team stays patient"), a:"C"},
+       {t: p("Go again — push the intensity higher, make them feel us, don't let them breathe","Go again — push the intensity higher, make them feel the pressure, don't let them breathe"), a:"W"},
      ]},
 
     // Q4 — MC
+    // Technique: loss aversion / hollow compliment (Enneagram) — asking what DOESN'T land
+    // is far harder to game than asking what motivates. The miss reveals the real value system.
     {part:"Part 2 — Instincts",
-     text: p("After a game you're genuinely happy with — what actually happened?",
-             "After a game this player was genuinely happy with — what actually happened?"),
-     sub:"",type:"mc",
+     text: p("A teammate says something after a game that's meant as a compliment — but it doesn't quite land. Which one would feel most hollow to you?",
+             "Which of these compliments, even if genuinely meant, would feel most hollow to this player?"),
+     sub: p("The one that misses you reveals a lot.","The one that misses them reveals a lot about what they actually value."),
+     type:"mc",
      choices:[
-       {t: p("I had moments that mattered — things I did changed the outcome","They had moments that mattered — things they did genuinely changed the game"), a:"M"},
-       {t: p("I made good decisions consistently — I was in control of my game","Their decision-making was sharp and consistent throughout"), a:"C"},
-       {t: p("I competed for everything — never stopped and the team felt it","They competed for everything — their energy lifted the whole team"), a:"W"},
+       {t: p("\"You worked your socks off today\" — effort recognised, but that wasn't what you were going for","\"You worked your socks off today\" — effort recognised, but that wasn't what they were going for"), a:"M"},
+       {t: p("\"You had some brilliant individual moments\" — nice, but moments aren't how you measure whether you played well","\"You had some brilliant individual moments\" — nice, but moments aren't how they measure whether they played well"), a:"C"},
+       {t: p("\"Really composed and controlled today\" — meant well, but you were trying to impose yourself and lead the fight","\"Really composed and controlled today\" — meant well, but they were trying to impose themselves and lead the fight"), a:"W"},
      ]},
 
     // Q5 — MC
+    // Technique: all three options are equally active/valid — no passive or "wrong" answer
     {part:"Part 2 — Instincts",
-     text: p("A teammate keeps losing the ball trying to dribble when the pass was right there. What do you feel?",
-             "A player keeps losing the ball dribbling when a simple pass was available. What does this player feel?"),
+     text: p("A teammate keeps losing the ball going for the dribble when the pass was right there. What's your honest reaction?",
+             "A player keeps losing the ball going for the dribble when a pass was available. What's this player's honest reaction?"),
      sub: p("Be honest.",""),type:"mc",
      choices:[
-       {t: p("Nothing really — I'd probably do the same. You have to back yourself","They'd probably do the same — backing yourself is part of the game"), a:"M"},
-       {t: p("Frustrated — the right option was obvious, why force something that wasn't on?","Frustrated — the correct option was clear and it was ignored"), a:"C"},
-       {t: p("Annoyed — but I'm already moving to win the ball back","Annoyed — but their reaction is immediate, already hunting the ball"), a:"W"},
+       {t: p("You understand it — you can't create things without attempting them","They understand it — you can't create things without attempting them"), a:"M"},
+       {t: p("Frustrated — the correct option was there every time, it's a costly pattern","Frustrated — the correct option was there every time, it's a costly pattern for the team"), a:"C"},
+       {t: p("Urgency — you're already moving to win the ball back before it's even fully lost","Urgency — they're already moving to win the ball back before it's even fully lost"), a:"W"},
      ]},
 
-    // Q6 — MC (confidence killer — hardest to game)
+    // Q6 — MC
+    // Technique: confidence killer / loss aversion — vulnerability is automatic, harder to perform
     {part:"Part 2 — Instincts",
      text: p("What kills your confidence fastest in a game?",
              "What kills this player's confidence fastest in a game?"),
      sub: p("This one reveals a lot — be honest.","Think about how they react when things aren't going their way."),
      type:"mc",
      choices:[
-       {t: p("Getting read — when I feel predictable and my usual moves stop working","Being read — when their unpredictability is being solved by the opposition"), a:"M"},
-       {t: p("Losing control of my own decisions — avoidable mistakes that I know are on me","Poor decisions they know were avoidable — losing control of their own game"), a:"C"},
-       {t: p("Feeling outfought — when someone in a duel wants it more than me","Feeling outfought — when the physical battle is being lost"), a:"W"},
+       {t: p("When the opponent has your number — you can feel yourself becoming predictable and nothing's coming off","When the opponent has their number — they can feel themselves becoming predictable and nothing's coming off"), a:"M"},
+       {t: p("When your own decisions start costing you — avoidable mistakes that you know are entirely on you","When their own decisions start costing them — avoidable mistakes they know are entirely on them"), a:"C"},
+       {t: p("When you're losing your battles — someone is imposing themselves on you and you can feel it happening","When they're losing their battles — someone is imposing themselves and they can feel it happening"), a:"W"},
      ]},
 
     // Q7 — Rating (team frustration)
+    // Technique: frustration signals are harder to fake than aspirations
     {part:"Part 2 — Instincts",
-     text: p("Your team is struggling and nothing is clicking. Rate how much each thing frustrates you.",
-             "The team is struggling. Rate how frustrated this player gets by each of these."),
+     text: p("Your team is struggling and nothing is clicking. Rate how much each of these frustrates you.",
+             "The team is struggling and nothing is clicking. Rate how frustrated this player gets by each of these."),
      sub:"1 = barely bothers me · 5 = drives me mad",
      type:"rating",
      statements:[
-       {text: p("Nobody's taking a risk — we're going through the motions and not backing our quality","Nobody's taking a risk or backing their quality — passive, safe football"), arch:"M"},
-       {text: p("We're being outthought — their shape is winning and we have no tactical answers","Being outthought — the opposition's structure is winning the tactical battle"), arch:"C"},
-       {text: p("We're being outfought — they want it more than us and everyone can see it","Being outfought — the opposition has more desire and intensity right now"), arch:"W"},
+       {text: p("Nobody's willing to take anything on — the game is there to be taken but everyone's playing it safe and nothing's being created","Nobody's willing to take anything on — the game is there for the taking but the team is playing it safe"), arch:"M"},
+       {text: p("We can't find any answers — whatever we try they respond, and we have no way through their structure","The team can't find any answers — whatever they try the opposition responds, with no way through their structure"), arch:"C"},
+       {text: p("We're not fighting hard enough — they're winning the physical battles and it's affecting the whole team's belief","They're not fighting hard enough — the physical battles are being lost and it's affecting belief throughout the team"), arch:"W"},
      ]},
 
-    // Q8 — Open: position brings best out
+    // Q8 — Open: best position
     {part:"Part 3 — In Your Own Words",
      text: p("What position feels most natural — and what does it let you do that other positions don't?",
              "What position brings the best out of this player — and what does it allow them to do?"),
      sub: p("If you play everywhere, pick the one that feels most like you. What does it unlock in your game?",
             "What does the position give them that others take away?"),
-     type:"open", ph: p("Tell us the position and exactly why it suits you...","Tell us the position and what it brings out in them...")},
+     type:"open", ph: p("e.g. Central mid — I get the ball in tight spaces which is when I'm at my best. Playing wide cuts me off from the game and I lose all my influence...","e.g. Central mid — they get the ball in tight spaces, which is when they're at their best. Wider positions cut them off from the game...")},
 
-    // Q9 — Open: position brings worst out
+    // Q9 — Open: worst position
     {part:"Part 3 — In Your Own Words",
      text: p("What position brings the worst out of you — and why?",
              "What position brings the worst out of this player — and why?"),
      sub: p("What does it ask of you that goes against how you naturally play?",
             "What does it demand from them that goes against their natural game?"),
-     type:"open", ph: p("Which position restricts you and what does it take away?","Which position restricts them and why?")},
+     type:"open", ph: p("e.g. Right back — I'm defending constantly, it takes me away from where I actually affect the game. Long stretches where I feel invisible and restricted...","e.g. Right back — they're defending constantly, away from where they actually affect things. Long stretches where they feel invisible...")},
 
     // Q10 — Open: player they love watching
     {part:"Part 3 — In Your Own Words",
@@ -376,7 +385,7 @@ function getQuestions(){
              "Which player does this player love watching most — and what draws them to that player?"),
      sub: p("Tell us exactly who and exactly why. What do they do that nobody else does?",
             "What specifically about that player's game do they connect with?"),
-     type:"open", ph: p("Who and why...","Who and why does it resonate with them...")},
+     type:"open", ph: p("e.g. Vinícius Jr — the way he runs at defenders with zero fear, and how he celebrates every goal like it's the most important thing that's ever happened...","e.g. Vinícius Jr — the way they talk about how he runs at people without fear. That energy is exactly what they want to feel in their own game...")},
   ];
 }
 
@@ -407,7 +416,7 @@ function renderQ(i){
   const q=QUESTIONS[i], total=QUESTIONS.length;
   document.getElementById('prog-label').textContent=`Question ${i+1} of ${total}`;
   document.getElementById('prog-part').textContent=q.part;
-  document.getElementById('prog-fill').style.width=Math.round(i/total*100)+'%';
+  document.getElementById('prog-fill').style.width=Math.round((i+1)/total*100)+'%';
   document.getElementById('btn-back').style.display=i===0?'none':'block';
 
   const card=document.getElementById('q-card');
@@ -710,7 +719,8 @@ function renderResult(scores){
   const sorted=Object.entries(pct).sort((a,b)=>b[1]-a[1]);
   const [primary,secondary,tertiary]=[sorted[0],sorted[1],sorted[2]];
   const isBalanced=Math.max(pct.M,pct.C,pct.W)-Math.min(pct.M,pct.C,pct.W)<18;
-  const secTertClose=Math.abs(secondary[1]-tertiary[1])<=8;
+  const secTertClose=Math.abs(secondary[1]-tertiary[1])<=10;
+  const primSecClose=primary[1]-secondary[1]<=15;
 
   document.getElementById('res-headline').innerHTML=profile.name.toUpperCase().replace(' ','<br>');
   document.getElementById('res-tagline').textContent=profile.tagline;
@@ -718,6 +728,8 @@ function renderResult(scores){
 
   // Dynamic blend tag based on actual scores
   let blendLabel = isBalanced ? 'Balanced — All Three Present' :
+    (primSecClose && secTertClose) ? `${names[primary[0]]} · ${names[secondary[0]]} · ${names[tertiary[0]]}` :
+    primSecClose ? `${names[primary[0]]} · ${names[secondary[0]]}` :
     secTertClose ? `${names[primary[0]]} · ${names[secondary[0]]} · ${names[tertiary[0]]}` :
     `${names[primary[0]]} · ${names[secondary[0]]}`;
   document.getElementById('res-blend-tag').innerHTML=`<span class="blend-tag">${blendLabel}</span>`;
@@ -762,8 +774,12 @@ function renderResult(scores){
   // Balance/close secondary-tertiary insights
   const balanceInsight = isBalanced ?
     `<br><br><strong>The rare thing about your profile:</strong> All three archetypes are genuinely present and active in your game. Most players are dominant in one with a clear drop-off. You have access to all three modes — which means you can adapt to what any specific game demands. The development challenge is picking a lane deliberately rather than switching unconsciously.` :
+    (primSecClose && secTertClose) ?
+    `<br><br><strong>Your profile is close to three-way balanced:</strong> ${names[primary[0]]} (${primary[1]}%), ${names[secondary[0]]} (${secondary[1]}%) and ${names[tertiary[0]]} (${tertiary[1]}%) are all within striking distance of each other. You have genuine presence across all three archetypes — the question is which one leads when it counts most.` :
+    primSecClose ?
+    `<br><br><strong>Notice how close your top two are:</strong> ${names[primary[0]]} (${primary[1]}%) and ${names[secondary[0]]} (${secondary[1]}%) are only ${primary[1]-secondary[1]}% apart. You don't have one dominant archetype with a clear drop-off — you have two near-equal primary identities. This gives you more tools than most, but the most dangerous version of you leads with one deliberately.` :
     secTertClose ?
-    `<br><br><strong>Notice something about your secondary and tertiary:</strong> ${names[secondary[0]]} (${secondary[1]}%) and ${names[tertiary[0]]} (${tertiary[1]}%) are only ${Math.abs(secondary[1]-tertiary[1])}% apart. That's closer to a Harry Kane-style 50/25/25 split than a typical primary-dominant profile. This is a strength — you have two supporting weapons rather than one, which makes you harder to read and more adaptable to different game situations.` : '';
+    `<br><br><strong>Notice something about your secondary and tertiary:</strong> ${names[secondary[0]]} (${secondary[1]}%) and ${names[tertiary[0]]} (${tertiary[1]}%) are only ${Math.abs(secondary[1]-tertiary[1])}% apart. That's closer to a 50/25/25 split than a typical primary-dominant profile. This is a strength — you have two supporting weapons rather than one, which makes you harder to read and more adaptable to different game situations.` : '';
 
   const breakdownHTML = `
     <p class="card-label">Your Full Archetype Breakdown</p>
@@ -815,27 +831,37 @@ function renderResult(scores){
 async function submitEmail(){
   const email=document.getElementById('email-input').value.trim();
   if(!email||!email.includes('@')){ document.getElementById('email-input').focus(); return; }
+  const btn=document.querySelector('.btn-email');
+  const existingErr=document.getElementById('email-error');
+  if(existingErr) existingErr.remove();
   const summary=QUESTIONS.map((q,i)=>{
     if(!answers[i]) return null;
     if(q.type==='rating') return `${q.text}\n→ Ratings: ${answers[i].ratings?.join(', ')}`;
     return `${q.text}\n→ ${answers[i].text||answers[i].t||''}`;
   }).filter(Boolean).join('\n\n');
   const scores=`Magician: ${document.getElementById('pct-M').textContent} | Conductor: ${document.getElementById('pct-C').textContent} | Warrior: ${document.getElementById('pct-W').textContent}`;
+  btn.textContent='Sending...'; btn.disabled=true;
   try{
-    const btn=document.querySelector('.btn-email');
-    btn.textContent='Sending...'; btn.disabled=true;
-    await fetch('https://formspree.io/f/xlgokgql',{
+    const res=await fetch('https://formspree.io/f/xlgokgql',{
       method:'POST',
       headers:{'Content-Type':'application/json','Accept':'application/json'},
       body:JSON.stringify({email,mode:whoMode,profile:document.getElementById('res-profile-name').textContent,scores,answers:summary,submitted_at:new Date().toLocaleString()})
     });
-  } catch(e){}
-  document.getElementById('email-gate').style.display='none';
-  document.getElementById('email-sent').style.display='block';
+    if(!res.ok) throw new Error('failed');
+    document.getElementById('email-gate').style.display='none';
+    document.getElementById('email-sent').style.display='block';
+  } catch(e){
+    btn.textContent='Send It →'; btn.disabled=false;
+    const err=document.createElement('p');
+    err.id='email-error';
+    err.style.cssText='color:#f87171;font-size:12px;margin-top:8px;text-align:center';
+    err.textContent='Something went wrong — please try again.';
+    document.querySelector('.email-row').after(err);
+  }
 }
 
 function retake(){ answers={}; current=0; SHUFFLED_MC={}; showScreen('landing'); }
-function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('screen-'+id).classList.add('active'); }
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById('screen-'+id).classList.add('active'); window.scrollTo(0,0); }
 </script>
 </body>
 </html>
