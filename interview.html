@@ -254,6 +254,13 @@ const PROFILES = {
 
 const ARCH_COLORS = {M:'#c084fc', C:'#38bdf8', W:'#fb923c'};
 
+// Anthropic built-in web search tool — searches only when a named player is mentioned
+const SEARCH_TOOL = {
+  type: 'web_search_20250305',
+  name: 'web_search',
+  max_uses: 3
+};
+
 const OPENINGS = [
   "Tell me about a moment in football where you felt completely yourself.",
   "What does a really good game feel like for you — walk me through it.",
@@ -292,7 +299,10 @@ JSON rules:
 — report_p1/p2/p3: three paragraphs in the Archetypes voice — direct, warm, specific to what THIS player said. Use their name. Reference specific things from the conversation. Validate their identity before developing it. Use HTML <strong> tags for emphasis. Make it feel like the most honest thing anyone has ever said to them about their football.
 — comp_name: a real current or historical footballer who shares this archetype profile
 — comp_pos: their position
-— comp_why: 2–3 sentences tying the comparison to something specific this player described`;
+— comp_why: 2–3 sentences tying the comparison to something specific this player described
+
+WEB SEARCH:
+You have access to a web_search tool. When the player being interviewed mentions a specific real footballer by name, use it to look up that player's playing style, position, and characteristics. Use what you learn to ask a sharper follow-up question or to make a more accurate archetype comparison in the final profile. Only search when a specific player name comes up and the information would genuinely enrich the conversation — not for every message.`;
 
 // ── STATE ─────────────────────────────────────────────────────
 let playerName = '';
@@ -373,31 +383,89 @@ async function sendMessage(){
   }
 }
 
+const API_HEADERS = {
+  'Content-Type': 'application/json',
+  'x-api-key': API_KEY,
+  'anthropic-version': '2023-06-01',
+  'anthropic-dangerous-direct-browser-access': 'true'
+};
+
 async function callAPI(){
-  // After 8 exchanges, instruct the AI to wrap up
   const closeNote = exchangeCount >= 8
     ? `\n\nINSTRUCTION: You now have sufficient information. Your next response MUST be the PROFILE_READY JSON. Do not ask another question.`
     : '';
+  const systemPrompt = SYSTEM_BASE
+    + `\n\nPlayer name: ${playerName}. Exchanges completed so far: ${exchangeCount}.`
+    + closeNote;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 700,
-      system: SYSTEM_BASE + `\n\nPlayer name: ${playerName}. Exchanges completed so far: ${exchangeCount}.` + closeNote,
-      messages
-    })
-  });
+  // Local thread — extends global messages with tool turns without mutating state
+  let thread = [...messages];
 
-  if(!res.ok) throw new Error(`API error ${res.status}`);
-  const data = await res.json();
-  return data.content[0].text.trim();
+  for(let loop = 0; loop < 5; loop++){
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 700,
+        system: systemPrompt,
+        tools: [SEARCH_TOOL],
+        messages: thread
+      })
+    });
+
+    if(!res.ok) throw new Error(`API error ${res.status}`);
+    const data = await res.json();
+
+    // Normal text response — done
+    if(data.stop_reason === 'end_turn'){
+      const block = data.content.find(b => b.type === 'text');
+      return block?.text?.trim() || '';
+    }
+
+    // Tool use — execute each search, then continue the loop
+    if(data.stop_reason === 'tool_use'){
+      const toolUses = data.content.filter(b => b.type === 'tool_use');
+      thread.push({role:'assistant', content: data.content});
+
+      const results = await Promise.all(toolUses.map(async tu => ({
+        type: 'tool_result',
+        tool_use_id: tu.id,
+        content: await fetchPlayerInfo(tu.input.query ?? tu.input.player_name ?? JSON.stringify(tu.input))
+      })));
+      thread.push({role:'user', content: results});
+      continue;
+    }
+
+    // Fallback — extract any text present
+    const block = data.content?.find(b => b.type === 'text');
+    if(block) return block.text.trim();
+    break;
+  }
+
+  throw new Error('No response generated');
+}
+
+// Executes a web search query using Claude's training knowledge about footballers.
+// Called when the tool use loop returns a search request for a named player.
+async function fetchPlayerInfo(query){
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: API_HEADERS,
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 450,
+        system: `You are a football knowledge assistant. When given a search query about a footballer, return factual information about: their position, playing style, key strengths, how they move and make decisions, what makes them distinctive, and their approach to competing. Be specific and grounded.`,
+        messages: [{role:'user', content: `Search: ${query}`}]
+      })
+    });
+    if(!res.ok) return 'Player information unavailable.';
+    const data = await res.json();
+    return data.content[0]?.text?.trim() || 'Player information unavailable.';
+  } catch(e){
+    return 'Search unavailable — continuing with existing knowledge.';
+  }
 }
 
 function transitionToScoring(){
