@@ -310,6 +310,8 @@ select {
 #edit-save:hover { background: #d4a82e; }
 #edit-cancel { background: transparent; color: var(--body); }
 #edit-cancel:hover { border-color: var(--red); color: var(--red); }
+#edit-remove { background: transparent; border-color: var(--red); color: var(--red); margin-top: 8px; width: 100%; padding: 7px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--red); transition: all .15s; }
+#edit-remove:hover { background: rgba(255,80,80,.12); }
 
 /* ANIMATE PROGRESS */
 #anim-bar {
@@ -360,7 +362,11 @@ select {
       <button class="mode-btn" data-mode="draw-home" id="btn-draw-home">Arrow (Home)</button>
       <button class="mode-btn" data-mode="draw-away" id="btn-draw-away">Arrow (Away)</button>
     </div>
-    <button class="icon-btn" id="btn-clear-arrows" title="Clear arrows">✕</button>
+    <div class="divider"></div>
+    <button class="icon-btn" id="btn-add-home" title="Add home player" style="color:var(--body);border-color:var(--border)">+ Home</button>
+    <button class="icon-btn" id="btn-add-away" title="Add away player" style="color:var(--body);border-color:var(--border)">+ Away</button>
+    <div class="divider"></div>
+    <button class="icon-btn" id="btn-clear-arrows" title="Clear arrows">✕ Arrows</button>
   </div>
 
   <div id="canvas-container">
@@ -403,6 +409,7 @@ select {
       <button id="edit-save">Save</button>
       <button id="edit-cancel">Cancel</button>
     </div>
+    <button id="edit-remove">Remove player</button>
   </div>
 </div>
 
@@ -1085,6 +1092,31 @@ function saveEdit() {
   render();
 }
 
+function removePlayer() {
+  if (!editTarget) return;
+  if (editTarget.team === 'home') {
+    homePlayers = homePlayers.filter(p => p.id !== editTarget.id);
+  } else {
+    awayPlayers = awayPlayers.filter(p => p.id !== editTarget.id);
+  }
+  closeEditModal();
+  render();
+}
+
+function addPlayer(team) {
+  // Place new player in centre of their half
+  const pnx = 0.5;
+  const pny = team === 'home' ? 0.75 : 0.25;
+  const list = team === 'home' ? homePlayers : awayPlayers;
+  const maxN = list.reduce((m, p) => Math.max(m, p.n), 0);
+  const p = { id: _uid++, team, n: maxN + 1, name: '', pos: 'SUB', pnx, pny };
+  list.push(p);
+  render();
+  // Open edit modal immediately so coach can name them
+  openEditModal(p);
+  updateHint('New player added — fill in their details.');
+}
+
 // ─── POINTER EVENTS ───────────────────────────────────────────────────────────
 function getCanvasPos(e) {
   const rect = canvas.getBoundingClientRect();
@@ -1288,7 +1320,10 @@ setTimeout(() => {
 
   document.getElementById('edit-save').addEventListener('click', saveEdit);
   document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+  document.getElementById('edit-remove').addEventListener('click', removePlayer);
   document.getElementById('modal-backdrop').addEventListener('click', closeEditModal);
+  document.getElementById('btn-add-home').addEventListener('click', () => addPlayer('home'));
+  document.getElementById('btn-add-away').addEventListener('click', () => addPlayer('away'));
   document.getElementById('edit-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });
   document.getElementById('edit-pos').addEventListener('keydown',  e => { if (e.key === 'Enter') saveEdit(); });
   document.getElementById('edit-number').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });
