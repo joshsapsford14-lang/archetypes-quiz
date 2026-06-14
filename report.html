@@ -591,6 +591,35 @@ input[type=range]::-moz-range-thumb {
     </div>
   </div>
 
+  <!-- ── TACTICS BOARD ── -->
+  <div class="card" id="tactics-card">
+    <div class="card-header" id="tactics-toggle" style="cursor:pointer;margin-bottom:0;padding-bottom:14px">
+      <div class="card-header-icon">⚽</div>
+      <div style="flex:1">
+        <div class="card-title">Formation &amp; Tactics Board</div>
+        <div class="field-hint" style="margin-top:2px">Set up your formation, draw movement arrows, save phases — then lock it in.</div>
+      </div>
+      <div id="tactics-chevron" style="font-size:18px;color:var(--muted);transition:transform .2s">▼</div>
+    </div>
+    <div id="tactics-body" style="display:none">
+      <div style="padding:0 18px 10px">
+        <div id="tactics-locked-banner" style="display:none;background:rgba(80,240,144,.07);border:1px solid rgba(80,240,144,.2);border-radius:7px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--green);display:flex;align-items:center;gap:8px">
+          <span>✓</span><span id="tactics-locked-text">Formation locked in.</span>
+          <button id="btn-unlock-tactics" style="margin-left:auto;background:transparent;border:1px solid rgba(80,240,144,.3);color:var(--green);border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif">Edit</button>
+        </div>
+        <div id="tactics-iframe-wrap">
+          <iframe
+            id="tactics-iframe"
+            src="tactics.html"
+            style="width:100%;border:none;border-radius:8px;min-height:560px;display:block;background:#0a1a0f"
+            title="Tactics Board"
+          ></iframe>
+        </div>
+        <button id="btn-lock-tactics" style="width:100%;margin-top:10px;padding:11px;background:var(--gold);border:none;border-radius:8px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.08em;cursor:pointer;transition:all .15s">Lock In Formation →</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── SQUAD ── -->
   <div class="card">
     <div class="card-header">
@@ -957,6 +986,54 @@ document.getElementById('btn-add-bench').addEventListener('click', () => {
 // Load saved state (if any), then update sliders
 loadForm();
 updateSliders();
+
+// ─── TACTICS BOARD EMBED ──────────────────────────────────────────────────────
+let tacticsData = null;
+let tacticsOpen = false;
+
+document.getElementById('tactics-toggle').addEventListener('click', () => {
+  tacticsOpen = !tacticsOpen;
+  document.getElementById('tactics-body').style.display = tacticsOpen ? 'block' : 'none';
+  document.getElementById('tactics-chevron').style.transform = tacticsOpen ? 'rotate(180deg)' : '';
+});
+
+document.getElementById('btn-lock-tactics').addEventListener('click', () => {
+  const iframe = document.getElementById('tactics-iframe');
+  iframe.contentWindow.postMessage('matchday:getState', '*');
+});
+
+document.getElementById('btn-unlock-tactics').addEventListener('click', () => {
+  tacticsData = null;
+  const banner = document.getElementById('tactics-locked-banner');
+  banner.style.display = 'none';
+  document.getElementById('tactics-iframe-wrap').style.display = 'block';
+  document.getElementById('btn-lock-tactics').style.display = 'block';
+  autoSave();
+});
+
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'matchday:tacticsState') return;
+  tacticsData = e.data.data;
+
+  const savedPhases = (tacticsData.phases || []).filter(Boolean).length;
+  const playerCount = (tacticsData.homePlayers || []).length;
+  const locked = document.getElementById('tactics-locked-banner');
+  document.getElementById('tactics-locked-text').textContent =
+    `${tacticsData.homeFormation} locked in · ${playerCount} players · ${savedPhases} phase${savedPhases !== 1 ? 's' : ''} saved.`;
+  locked.style.display = 'flex';
+  document.getElementById('tactics-iframe-wrap').style.display = 'none';
+  document.getElementById('btn-lock-tactics').style.display = 'none';
+
+  // Auto-fill lineup from tactics board if lineup field is empty
+  const lineupField = document.getElementById('lineup');
+  if (!lineupField.value.trim() && tacticsData.homePlayers.length) {
+    lineupField.value = tacticsData.homePlayers
+      .map(p => `${p.n}. ${p.name || p.pos}${p.pos && p.name ? ' (' + p.pos + ')' : ''}`)
+      .join('\n');
+  }
+
+  autoSave();
+});
 </script>
 </body>
 </html>

@@ -1331,6 +1331,23 @@ setTimeout(() => {
   initCanvas();
   updatePhaseUI();
 }, 100);
+
+// ─── EMBEDDED MODE ────────────────────────────────────────────────────────────
+// When loaded in an iframe, respond to state requests from the parent page.
+window.addEventListener('message', e => {
+  if (e.data === 'matchday:getState') {
+    const state = {
+      homePlayers: homePlayers.map(p => ({ ...p })),
+      awayPlayers: awayPlayers.map(p => ({ ...p })),
+      homeArrows:  homeArrows.map(a => ({ ...a })),
+      awayArrows:  awayArrows.map(a => ({ ...a })),
+      phases: phases.map((ph, i) => ph ? { index: i, ...ph } : null),
+      homeFormation: document.getElementById('home-formation').value,
+      awayFormation: document.getElementById('away-formation').value,
+    };
+    e.source.postMessage({ type: 'matchday:tacticsState', data: state }, '*');
+  }
+});
 </script>
 </body>
 </html>
