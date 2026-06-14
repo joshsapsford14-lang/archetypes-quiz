@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MatchDay — Generating Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --black:    #06080C;
+  --card:     #10161F;
+  --card2:    #0d1219;
+  --border:   #232D3A;
+  --border2:  #1a2330;
+  --gold:     #F0C040;
+  --gold-dim: #B08820;
+  --gold-bg:  rgba(240,192,64,.07);
+  --white:    #F4F6FA;
+  --body:     #D8DFE8;
+  --muted:    #4A5568;
+  --green:    #50F090;
+  --green-bg: rgba(80,240,144,.07);
+  --red:      #FF5050;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--black);
+  color: var(--body);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 100px;
+}
+#app { max-width: 680px; margin: 0 auto; padding: 0 16px; }
+
+/* ── TOP BAR ── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 20px;
+}
+.wordmark { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: .06em; color: var(--white); }
+.wordmark span { color: var(--gold); }
+.back-btn {
+  background: transparent; border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; color: var(--body); font-size: 12px; font-weight: 500;
+  cursor: pointer; text-decoration: none; transition: all .15s;
+}
+.back-btn:hover { border-color: var(--gold-dim); color: var(--white); }
+
+/* ── API KEY GATE ── */
+#api-key-gate {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  margin-bottom: 20px;
+}
+#api-key-gate h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: .05em;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+#api-key-gate p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+.key-row { display: flex; gap: 8px; }
+.key-row input {
+  flex: 1;
+  background: var(--black);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--white);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+.key-row input:focus { border-color: var(--gold); }
+.key-row input::placeholder { color: var(--muted); }
+.key-btn {
+  background: var(--gold);
+  border: none;
+  border-radius: 7px;
+  padding: 10px 18px;
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.key-btn:hover { background: #d4a82e; }
+.key-saved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--green);
+  margin-top: 8px;
+}
+
+/* ── MATCH HEADER ── */
+.match-header {
+  margin-bottom: 20px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--border);
+}
+.match-header-vs {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(24px, 6vw, 38px);
+  letter-spacing: .03em;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.match-header-vs span { color: var(--gold); margin: 0 6px; font-size: .6em; vertical-align: middle; }
+.match-header-meta { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; letter-spacing: .06em; }
+
+/* ── PROGRESS ── */
+.progress-bar-wrap {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+#progress-bar {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  width: 0%;
+  transition: width .4s ease;
+}
+
+/* ── SECTION CARDS ── */
+.section-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color .3s;
+}
+.section-card.generating { border-color: rgba(240,192,64,.3); }
+.section-card.done       { border-color: var(--border); }
+.section-card.error      { border-color: rgba(255,80,80,.3); }
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border2);
+}
+.section-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.2);
+  border-radius: 4px;
+  padding: 3px 7px;
+}
+.section-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: .05em;
+  color: var(--white);
+  flex: 1;
+}
+.section-status {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+.section-status.waiting  { color: var(--muted); }
+.section-status.active   { color: var(--gold); }
+.section-status.done     { color: var(--green); }
+.section-status.error    { color: var(--red); }
+
+.section-body {
+  padding: 16px 18px;
+  min-height: 60px;
+}
+.section-text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--body);
+  font-weight: 300;
+}
+.section-text p { margin-bottom: 12px; }
+.section-text p:last-child { margin-bottom: 0; }
+
+/* Typing cursor */
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--gold);
+  vertical-align: text-bottom;
+  margin-left: 1px;
+  animation: blink .7s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.section-waiting-text {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.section-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 16px 12px;
+  gap: 8px;
+}
+.regen-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.regen-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+.regen-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ── ERROR STATE ── */
+.error-msg {
+  font-size: 13px;
+  color: var(--red);
+  padding: 10px 0;
+}
+
+/* ── ALL DONE ── */
+#all-done {
+  display: none;
+  background: linear-gradient(135deg, rgba(80,240,144,.06) 0%, var(--card) 100%);
+  border: 1px solid rgba(80,240,144,.2);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  margin-top: 16px;
+}
+#all-done h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: .05em;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+#all-done p { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+.export-btn {
+  background: var(--gold);
+  border: none;
+  border-radius: 10px;
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: .1em;
+  padding: 14px 40px;
+  cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 4px 24px rgba(240,192,64,.25);
+  display: inline-block;
+}
+.export-btn:hover { background: #d4a82e; transform: translateY(-1px); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top-bar">
+    <div class="wordmark">Match<span>Day</span></div>
+    <a class="back-btn" href="preview.html">← Preview</a>
+  </div>
+
+  <!-- API KEY GATE -->
+  <div id="api-key-gate" style="display:none">
+    <h2>Anthropic API Key</h2>
+    <p>Your key is stored only in this browser. It is never sent anywhere except directly to Anthropic's API.</p>
+    <div class="key-row">
+      <input type="password" id="api-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <button class="key-btn" id="btn-save-key">Save & Generate</button>
+    </div>
+    <div class="key-saved" id="key-saved-msg" style="display:none">✓ Key saved</div>
+  </div>
+
+  <!-- MATCH HEADER -->
+  <div class="match-header" id="match-header" style="display:none">
+    <div class="match-header-vs" id="mh-vs"></div>
+    <div class="match-header-meta" id="mh-meta"></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar-wrap" id="progress-wrap" style="display:none">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- SECTION CARDS -->
+  <div id="sections-output"></div>
+
+  <!-- ALL DONE -->
+  <div id="all-done">
+    <h3>Report Complete</h3>
+    <p>All sections generated. Export as a standalone HTML file.</p>
+    <button class="export-btn" id="btn-export">Export Report →</button>
+  </div>
+</div>
+
+<script>
+// ─── PHASE DEFINITIONS ───────────────────────────────────────────────────────
+const PHASES = [
+  { id: 'buildup',      label: 'Buildup',       tag: 'IN POSSESSION'     },
+  { id: 'press',        label: 'Press',          tag: 'OUT OF POSSESSION' },
+  { id: 'rest-defence', label: 'Rest Defence',   tag: 'TRANSITION'        },
+  { id: 'block',        label: 'Block',          tag: 'DEFENSIVE'         },
+];
+
+const COMP_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
+const MODEL = 'claude-sonnet-4-20250514';
+
+// ─── API KEY ─────────────────────────────────────────────────────────────────
+function getApiKey() { return localStorage.getItem('matchday-api-key') || ''; }
+function saveApiKey(k) { localStorage.setItem('matchday-api-key', k.trim()); }
+
+// ─── LOAD FORM DATA ──────────────────────────────────────────────────────────
+let formData = {};
+try {
+  const raw = localStorage.getItem('matchday-report-form');
+  if (raw) formData = JSON.parse(raw);
+} catch(e) {}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const generated = {}; // phaseId → text
+let generating = false;
+
+// ─── PROMPT BUILDER ──────────────────────────────────────────────────────────
+function buildPrompt(phase) {
+  const age     = formData.age  || 12;
+  const comp    = formData.comp || 3;
+  const compLbl = COMP_LABELS[comp] || 'Medium';
+  const notes   = (formData.phases?.[phase.id]?.notes || '').trim();
+  const ageStr  = age >= 19 ? 'adult players' : `${age}-year-old players`;
+
+  const sectionPurpose = {
+    buildup:        'how the team builds play from the goalkeeper and defence — passing patterns, who receives, when to play long',
+    press:          'how and when the team presses out of possession — the triggers, the shape, who leads it and who covers',
+    'rest-defence': 'the team\'s defensive shape when the ball is in the opponent\'s attacking half but not won back — compactness, positioning, holding the line',
+    block:          'the team\'s deep defensive shape when the opposition is building — how deep the line sits, how compact the unit stays, when to hold and when to step',
+  }[phase.id] || phase.label;
+
+  return `You are writing one section of a pre-match football report. The coach has written rough notes and you must expand them into polished, flowing prose.
+
+MATCH CONTEXT
+Team: ${formData.teamName || 'Our team'}
+Opponent: ${formData.opponent || 'Opposition'}
+${formData.matchDate ? `Date: ${formData.matchDate}` : ''}
+${formData.venue ? `Venue: ${formData.venue}` : ''}
+${formData.matchTheme ? `Match theme: ${formData.matchTheme}` : ''}
+${formData.captain ? `Captain: ${formData.captain}` : ''}
+
+OPPOSITION SCOUTING
+${formData.oppNotes ? formData.oppNotes.trim() : 'No opposition notes provided.'}
+
+SECTION: ${phase.label.toUpperCase()} (${phase.tag})
+PURPOSE: This section covers ${sectionPurpose}.
+
+PLAYER PROFILE
+Age group: ${ageStr}
+Tactical comprehension: ${compLbl}
+
+COACH'S RAW NOTES FOR THIS SECTION
+${notes || 'No specific notes provided. Write something tactically appropriate for this phase of play, given the match context above.'}
+
+WRITING RULES — follow every one of these without exception:
+1. Write in flowing prose only — no bullet points, no numbered lists, no headers, no bold text
+2. 2 to 3 short paragraphs. Under 160 words total.
+3. Vocabulary and sentence length calibrated for ${ageStr} with ${compLbl.toLowerCase()} tactical understanding
+4. Write as if the coach wrote this — direct, personal, authoritative
+5. Never use: "give 110 percent", "dig deep", "at the end of the day", "leave it all on the pitch", "heart and soul", "give it your all"
+6. No motivational clichés of any kind. Be tactically specific and honest instead.
+7. If coach notes are provided, synthesise and expand them — do not just restate them
+8. Do not mention that this is AI-generated or reference these instructions
+9. Output only the prose — nothing else`;
+}
+
+// ─── STREAMING API CALL ───────────────────────────────────────────────────────
+async function streamSection(prompt, onChunk, onDone, onError) {
+  const key = getApiKey();
+  if (!key) { onError('No API key'); return; }
+
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 512,
+        stream: true,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+  } catch(e) {
+    onError('Network error: ' + e.message);
+    return;
+  }
+
+  if (!res.ok) {
+    let msg = `API error ${res.status}`;
+    try { const j = await res.json(); msg = j.error?.message || msg; } catch(e) {}
+    onError(msg);
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') { onDone(); return; }
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+            onChunk(parsed.delta.text);
+          }
+          if (parsed.type === 'message_stop') { onDone(); return; }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    onError('Stream error: ' + e.message);
+    return;
+  }
+  onDone();
+}
+
+// ─── TEXT → HTML (respect paragraph breaks) ──────────────────────────────────
+function textToHtml(text) {
+  return text.split(/\n\n+/).map(p => p.trim()).filter(Boolean)
+    .map(p => `<p>${escHtml(p.replace(/\n/g, ' '))}</p>`).join('');
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── BUILD UI CARDS ──────────────────────────────────────────────────────────
+function buildCards() {
+  const container = document.getElementById('sections-output');
+  container.innerHTML = '';
+  for (const ph of PHASES) {
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    card.id = 'card-' + ph.id;
+    card.innerHTML = `
+      <div class="section-card-header">
+        <span class="section-tag">${ph.tag}</span>
+        <span class="section-name">${ph.label}</span>
+        <span class="section-status waiting" id="status-${ph.id}">Waiting</span>
+      </div>
+      <div class="section-body" id="body-${ph.id}">
+        <div class="section-waiting-text">Waiting to generate…</div>
+      </div>
+      <div class="section-footer" id="footer-${ph.id}" style="display:none">
+        <button class="regen-btn" id="regen-${ph.id}">↺ Regenerate</button>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+// ─── GENERATE ONE SECTION ────────────────────────────────────────────────────
+async function generateSection(phase) {
+  const card     = document.getElementById('card-' + phase.id);
+  const statusEl = document.getElementById('status-' + phase.id);
+  const bodyEl   = document.getElementById('body-' + phase.id);
+  const footerEl = document.getElementById('footer-' + phase.id);
+  const regenBtn = document.getElementById('regen-' + phase.id);
+
+  card.className    = 'section-card generating';
+  statusEl.className = 'section-status active';
+  statusEl.textContent = 'Writing…';
+  bodyEl.innerHTML  = '<span class="cursor"></span>';
+  footerEl.style.display = 'none';
+
+  const prompt = buildPrompt(phase);
+  let text = '';
+
+  await new Promise(resolve => {
+    streamSection(
+      prompt,
+      chunk => {
+        text += chunk;
+        // Render live text with trailing cursor
+        const html = textToHtml(text);
+        // Replace last </p> with cursor inside it
+        bodyEl.innerHTML = html.replace(/<\/p>$/, '<span class="cursor"></span></p>');
+      },
+      () => {
+        // Done
+        generated[phase.id] = text;
+        bodyEl.innerHTML = `<div class="section-text">${textToHtml(text)}</div>`;
+        card.className = 'section-card done';
+        statusEl.className = 'section-status done';
+        statusEl.textContent = '✓ Done';
+        footerEl.style.display = 'flex';
+        regenBtn.disabled = false;
+        regenBtn.addEventListener('click', () => regenerate(phase));
+        resolve();
+      },
+      err => {
+        bodyEl.innerHTML = `<div class="error-msg">Error: ${escHtml(err)}</div>`;
+        card.className = 'section-card error';
+        statusEl.className = 'section-status error';
+        statusEl.textContent = '✗ Error';
+        footerEl.style.display = 'flex';
+        regenBtn.textContent = '↺ Retry';
+        regenBtn.disabled = false;
+        regenBtn.addEventListener('click', () => regenerate(phase));
+        resolve();
+      }
+    );
+  });
+}
+
+async function regenerate(phase) {
+  const regenBtn = document.getElementById('regen-' + phase.id);
+  regenBtn.disabled = true;
+  await generateSection(phase);
+  updateProgress();
+  checkAllDone();
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────────────────────
+function updateProgress() {
+  const done  = Object.keys(generated).length;
+  const total = PHASES.length;
+  document.getElementById('progress-bar').style.width = (done / total * 100) + '%';
+}
+
+function checkAllDone() {
+  const allDone = PHASES.every(ph => generated[ph.id]);
+  if (allDone) document.getElementById('all-done').style.display = 'block';
+}
+
+// ─── EXPORT HTML ─────────────────────────────────────────────────────────────
+function exportReport() {
+  const data  = formData;
+  const age   = data.age  || 12;
+  const comp  = data.comp || 3;
+
+  function formatDate(ds) {
+    if (!ds) return '';
+    const d = new Date(ds + 'T00:00:00');
+    return d.toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  function formatTime(ts) {
+    if (!ts) return '';
+    const [h, m] = ts.split(':').map(Number);
+    return `${h % 12 || 12}:${String(m).padStart(2,'0')}${h >= 12 ? 'pm' : 'am'}`;
+  }
+
+  const kickoff = new Date((data.matchDate || '') + 'T' + (data.kickoffTime || '09:15') + ':00');
+
+  const phaseSections = PHASES.map(ph => {
+    const text = generated[ph.id];
+    if (!text) return '';
+    return `
+    <section class="report-section">
+      <div class="section-label">${ph.tag}</div>
+      <h2>${ph.label}</h2>
+      <div class="section-prose">${textToHtml(text)}</div>
+    </section>`;
+  }).join('');
+
+  const lineupLines = (data.lineup || '').trim().split('\n').filter(Boolean);
+  const lineupHtml = lineupLines.length
+    ? `<section class="report-section">
+        <div class="section-label">SQUAD</div>
+        <h2>Starting Lineup</h2>
+        <div class="lineup-list">${lineupLines.map(l => `<div class="lineup-item">${escHtml(l)}</div>`).join('')}</div>
+      </section>`
+    : '';
+
+  const benchItems = (data.bench || []).filter(b => b.name);
+  const benchHtml = benchItems.length
+    ? `<div class="bench-list">${benchItems.map(b => `<div class="bench-item"><span class="bench-num">${escHtml(b.num || '—')}</span><span>${escHtml(b.name)}</span>${b.pos ? `<span class="bench-pos">${escHtml(b.pos)}</span>` : ''}</div>`).join('')}</div>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(data.teamName || 'MatchDay')} vs ${escHtml(data.opponent || '')} — Match Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root{--black:#06080C;--card:#10161F;--border:#232D3A;--gold:#F0C040;--gold-dim:#B08820;--white:#F4F6FA;--body:#D8DFE8;--muted:#4A5568}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:60px}
+.container{max-width:680px;margin:0 auto;padding:0 16px}
+
+/* HERO */
+.hero{padding:40px 0 32px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.hero-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.hero-vs{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,9vw,64px);letter-spacing:.02em;color:var(--white);line-height:.95;margin-bottom:16px}
+.hero-vs .sep{color:var(--gold);font-size:.55em;margin:0 8px;vertical-align:middle}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.hero-pill{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--border);color:var(--body);background:var(--card)}
+.hero-pill.gold{border-color:rgba(240,192,64,.3);color:var(--gold);background:rgba(240,192,64,.07)}
+.countdown{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.1em;color:var(--muted);margin-top:8px}
+.theme-badge{display:inline-block;background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--white);font-weight:500;font-style:italic;margin-top:12px;line-height:1.4}
+.theme-badge::before{content:'"';color:var(--gold);font-style:normal;font-family:'Bebas Neue',sans-serif;font-size:18px;vertical-align:-2px;margin-right:2px}
+.theme-badge::after{content:'"';color:var(--gold);font-style:normal;font-family:'Bebas Neue',sans-serif;font-size:18px;vertical-align:-2px;margin-left:2px}
+
+/* SECTIONS */
+.report-section{padding:28px 0;border-bottom:1px solid var(--border)}
+.report-section:last-child{border-bottom:none}
+.section-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.report-section h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.04em;color:var(--white);margin-bottom:14px}
+.section-prose p{font-size:15px;line-height:1.72;color:var(--body);font-weight:300;margin-bottom:12px}
+.section-prose p:last-child{margin-bottom:0}
+
+/* LINEUP */
+.lineup-list{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.lineup-item{font-size:14px;color:var(--body);padding:6px 0;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;letter-spacing:.03em}
+.lineup-item:last-child{border-bottom:none}
+.bench-list{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.bench-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:4px 0}
+.bench-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);width:20px}
+.bench-pos{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto}
+
+/* FOOTER */
+.report-footer{padding:24px 0;text-align:center;border-top:1px solid var(--border);margin-top:8px}
+.report-footer-brand{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.1em;color:var(--muted)}
+.report-footer-brand span{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="hero-eyebrow">Pre-Match Report</div>
+    <div class="hero-vs">
+      ${escHtml(data.teamName || 'Our Team')}<span class="sep">vs</span>${escHtml(data.opponent || 'Opposition')}
+    </div>
+    <div class="hero-meta">
+      ${data.matchDate ? `<span class="hero-pill gold">${formatDate(data.matchDate)}</span>` : ''}
+      ${data.kickoffTime ? `<span class="hero-pill">⏱ ${formatTime(data.kickoffTime)}</span>` : ''}
+      ${data.venue ? `<span class="hero-pill">📍 ${escHtml(data.venue)}</span>` : ''}
+      ${data.captain ? `<span class="hero-pill">© ${escHtml(data.captain)}</span>` : ''}
+    </div>
+    ${data.matchTheme ? `<div class="theme-badge">${escHtml(data.matchTheme)}</div>` : ''}
+    <div class="countdown" id="countdown"></div>
+  </div>
+
+  ${phaseSections}
+  ${lineupHtml}
+  ${benchHtml ? `<section class="report-section"><div class="section-label">BENCH</div><h2>Substitutes</h2>${benchHtml}</section>` : ''}
+
+  <div class="report-footer">
+    <div class="report-footer-brand">Match<span>Day</span></div>
+  </div>
+</div>
+<script>
+// Countdown to kickoff
+(function(){
+  const kickoff = new Date('${kickoff.toISOString()}');
+  const el = document.getElementById('countdown');
+  function update(){
+    const diff = kickoff - Date.now();
+    if(diff <= 0){el.textContent='Kickoff';return}
+    const h=Math.floor(diff/3600000),m=Math.floor(diff%3600000/60000);
+    el.textContent = h>0 ? h+'h '+m+'m to kickoff' : m+'m to kickoff';
+    setTimeout(update,30000);
+  }
+  update();
+})();
+<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `matchday-${(data.teamName || 'report').toLowerCase().replace(/\s+/g,'-')}-vs-${(data.opponent || 'opp').toLowerCase().replace(/\s+/g,'-')}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  // Check for API key
+  const key = getApiKey();
+  if (!key) {
+    document.getElementById('api-key-gate').style.display = 'block';
+
+    document.getElementById('btn-save-key').addEventListener('click', () => {
+      const k = document.getElementById('api-key-input').value.trim();
+      if (!k.startsWith('sk-')) { alert('That doesn\'t look like an Anthropic API key.'); return; }
+      saveApiKey(k);
+      document.getElementById('api-key-gate').style.display = 'none';
+      start();
+    });
+
+    document.getElementById('api-key-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-save-key').click();
+    });
+    return;
+  }
+  start();
+}
+
+async function start() {
+  // Show match header
+  const mhVs = document.getElementById('mh-vs');
+  mhVs.innerHTML = `${escHtml(formData.teamName || 'Our Team')} <span>vs</span> ${escHtml(formData.opponent || 'Opposition')}`;
+  document.getElementById('mh-meta').textContent = [
+    formData.matchDate ? new Date(formData.matchDate + 'T00:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short'}) : '',
+    formData.kickoffTime || '',
+    formData.venue || '',
+  ].filter(Boolean).join(' · ');
+  document.getElementById('match-header').style.display = 'block';
+  document.getElementById('progress-wrap').style.display = 'block';
+
+  buildCards();
+
+  // Generate sections sequentially
+  for (const phase of PHASES) {
+    await generateSection(phase);
+    updateProgress();
+  }
+
+  checkAllDone();
+}
+
+document.getElementById('btn-export').addEventListener('click', exportReport);
+
+init();
+</script>
+</body>
+</html>
