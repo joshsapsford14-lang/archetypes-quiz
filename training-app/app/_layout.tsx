@@ -1,4 +1,5 @@
 import "../global.css";
+import "@/lib/animated"; // enable NativeWind className on Reanimated components
 
 import { Anton_400Regular } from "@expo-google-fonts/anton";
 import {
@@ -21,7 +22,6 @@ import { colors } from "@/theme";
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    // Keys here become the fontFamily names used by NativeWind (tailwind.config.js).
     Anton: Anton_400Regular,
     DMSans: DMSans_400Regular,
     "DMSans-Medium": DMSans_500Medium,
@@ -30,7 +30,6 @@ export default function RootLayout() {
     "SpaceMono-Bold": SpaceMono_700Bold,
   });
 
-  // Hold on a pitch-colored screen until fonts are ready (avoids a flash).
   if (!fontsLoaded) {
     return <View style={{ flex: 1, backgroundColor: colors.pitch }} />;
   }
@@ -43,9 +42,14 @@ export default function RootLayout() {
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: colors.pitch },
-            animation: "fade",
           }}
-        />
+        >
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen
+            name="log"
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
+          />
+        </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
