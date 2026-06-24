@@ -557,6 +557,22 @@ input[type=range]::-moz-range-thumb {
     <div class="page-sub">Fill in what you know. Leave the rest to the application.</div>
   </header>
 
+  <!-- ── GAME FORMAT ── -->
+  <div class="card" id="format-card">
+    <div class="card-header">
+      <div class="card-header-icon">🏟</div>
+      <div class="card-title">Game Format</div>
+    </div>
+    <div class="card-body">
+      <div class="field-hint" style="margin-bottom:12px">Set this first — it determines formations, player count, and how the AI writes about the game.</div>
+      <div id="format-btns" style="display:flex;gap:8px">
+        <button class="format-btn" data-format="7" style="flex:1;padding:14px 8px;background:var(--black);border:1px solid var(--border);border-radius:8px;color:var(--body);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;cursor:pointer;transition:all .15s">7v7</button>
+        <button class="format-btn" data-format="9" style="flex:1;padding:14px 8px;background:var(--black);border:1px solid var(--border);border-radius:8px;color:var(--body);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;cursor:pointer;transition:all .15s">9v9</button>
+        <button class="format-btn" data-format="11" style="flex:1;padding:14px 8px;background:var(--black);border:1px solid var(--border);border-radius:8px;color:var(--body);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;cursor:pointer;transition:all .15s">11v11</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ── MATCH INFO ── -->
   <div class="card">
     <div class="card-header">
@@ -592,7 +608,13 @@ input[type=range]::-moz-range-thumb {
         <div class="field-label">Match Theme</div>
         <input id="match-theme" type="text" placeholder="One line — what this match is about" maxlength="80" id="match-theme">
         <div class="char-count" id="theme-char">0 / 80</div>
-        <div class="field-hint">The AI expands this into the report's central message. Keep it direct.</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <div id="theme-mode-toggle" style="width:36px;height:20px;border-radius:10px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0" title="Toggle theme mode">
+            <div id="theme-mode-knob" style="width:16px;height:16px;border-radius:50%;background:var(--white);position:absolute;top:2px;left:2px;transition:left .2s"></div>
+          </div>
+          <span id="theme-mode-label" style="font-size:11px;color:var(--muted)">AI will expand this into the report's tone</span>
+        </div>
+        <input type="hidden" id="theme-keep-exact" value="0">
       </div>
       <div class="field">
         <div class="field-label">Captain</div>
@@ -714,6 +736,7 @@ input[type=range]::-moz-range-thumb {
 
   <!-- ── TACTICAL PHASES ── -->
   <div id="tactical-phases"></div>
+  <button id="btn-add-custom-section" style="width:100%;padding:12px;background:transparent;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;margin-bottom:12px">+ Add custom section</button>
 
 </div>
 
@@ -936,8 +959,10 @@ function saveForm() {
     oppNotes:    document.getElementById('opp-notes').value,
     lineup:      document.getElementById('lineup').value,
     bench,
-    age:         parseInt(document.getElementById('age-slider').value),
-    comp:        parseInt(document.getElementById('comp-slider').value),
+    age:            parseInt(document.getElementById('age-slider').value),
+    comp:           parseInt(document.getElementById('comp-slider').value),
+    gameFormat:     currentFormat,
+    themeKeepExact: document.getElementById('theme-keep-exact').value,
     phases,
   };
   localStorage.setItem('matchday-report-form', JSON.stringify(data));
@@ -959,6 +984,8 @@ function loadForm() {
     if (d.lineup)      document.getElementById('lineup').value       = d.lineup;
     if (d.age)         document.getElementById('age-slider').value   = d.age;
     if (d.comp)        document.getElementById('comp-slider').value  = d.comp;
+    if (d.gameFormat)  applyFormatUI(d.gameFormat);
+    if (d.themeKeepExact === '1') document.getElementById('theme-mode-toggle').click();
 
     if (d.bench && d.bench.length) {
       document.getElementById('bench-rows').innerHTML = '';
@@ -1096,14 +1123,125 @@ window.addEventListener('message', e => {
     locked.style.display = 'flex';
     document.getElementById('tactics-iframe-wrap').style.display = 'none';
     document.getElementById('btn-lock-tactics').style.display = 'none';
-    const lineupField = document.getElementById('lineup');
-    if (!lineupField.value.trim() && tacticsData.homePlayers.length) {
-      lineupField.value = tacticsData.homePlayers
-        .map(p => `${p.n}. ${p.name || p.pos}${p.pos && p.name ? ' (' + p.pos + ')' : ''}`)
-        .join('\n');
-    }
+    syncPlayersToPhaseBoards(tacticsData.homePlayers);
     autoSave();
   }
+});
+
+// ─── GAME FORMAT ─────────────────────────────────────────────────────────────
+let currentFormat = localStorage.getItem('matchday-format') || '9';
+
+function applyFormatUI(fmt) {
+  currentFormat = fmt;
+  localStorage.setItem('matchday-format', fmt);
+  document.querySelectorAll('.format-btn').forEach(b => {
+    const active = b.dataset.format === fmt;
+    b.style.background      = active ? 'var(--gold)' : 'var(--black)';
+    b.style.color           = active ? 'var(--black)' : 'var(--body)';
+    b.style.borderColor     = active ? 'var(--gold)'  : 'var(--border)';
+    b.style.fontWeight      = active ? '700' : '400';
+  });
+  autoSave();
+}
+
+document.querySelectorAll('.format-btn').forEach(b => {
+  b.addEventListener('click', () => applyFormatUI(b.dataset.format));
+});
+applyFormatUI(currentFormat);
+
+// ─── THEME KEEP-EXACT TOGGLE ──────────────────────────────────────────────────
+let themeKeepExact = false;
+document.getElementById('theme-mode-toggle').addEventListener('click', () => {
+  themeKeepExact = !themeKeepExact;
+  const knob  = document.getElementById('theme-mode-knob');
+  const label = document.getElementById('theme-mode-label');
+  document.getElementById('theme-keep-exact').value = themeKeepExact ? '1' : '0';
+  document.getElementById('theme-mode-toggle').style.background = themeKeepExact ? 'var(--gold)' : 'var(--border)';
+  knob.style.left  = themeKeepExact ? '18px' : '2px';
+  label.textContent = themeKeepExact
+    ? 'Keep exactly as written — AI will not change this'
+    : 'AI will expand this into the report\'s tone';
+  label.style.color = themeKeepExact ? 'var(--gold)' : 'var(--muted)';
+  autoSave();
+});
+
+// ─── PLAYER SYNC: main board → per-phase boards ───────────────────────────────
+// When the main lineup board is locked, broadcast player names to all open phase boards
+function syncPlayersToPhaseBoards(players) {
+  document.querySelectorAll('.phase-tactics-iframe-wrap iframe').forEach(iframe => {
+    try {
+      iframe.contentWindow.postMessage({ type: 'matchday:setPlayers', players }, '*');
+    } catch(e) {}
+  });
+  // Also auto-fill lineup textarea if empty
+  const lineupField = document.getElementById('lineup');
+  if (!lineupField.value.trim() && players.length) {
+    lineupField.value = players
+      .map(p => `${p.n}. ${p.name || p.pos}${p.pos && p.name ? ' (' + p.pos + ')' : ''}`)
+      .join('\n');
+  }
+}
+
+// ─── CUSTOM SECTIONS ──────────────────────────────────────────────────────────
+let customSectionCount = 0;
+const customSections = {}; // id → { title, notes, boardLocked }
+
+document.getElementById('btn-add-custom-section').addEventListener('click', () => {
+  const id = 'custom-' + (++customSectionCount);
+  const card = document.createElement('div');
+  card.className = 'phase-card open';
+  card.id = 'phase-' + id;
+  card.innerHTML = `
+    <div class="phase-header" style="cursor:default">
+      <input
+        class="custom-section-title"
+        type="text"
+        placeholder="Section title…"
+        style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em;outline:none;padding-bottom:2px"
+        id="title-${id}"
+      >
+      <button style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;transition:color .15s" title="Remove section" onclick="this.closest('.phase-card').remove();delete customSections['${id}'];autoSave()">×</button>
+    </div>
+    <div class="phase-body" style="display:block">
+      <div class="phase-body-inner">
+        <span class="phase-notes-label">Coach's instructions</span>
+        <textarea id="notes-${id}" placeholder="Brain dump, bullet points, or a single sentence — the AI will synthesise it"></textarea>
+        <div class="phase-tactics-area">
+          <button class="phase-tactics-toggle" id="tactics-toggle-${id}">
+            <span>⊕ Add tactics board diagram</span>
+          </button>
+          <div class="phase-tactics-iframe-wrap" id="tactics-wrap-${id}">
+            <iframe src="tactics.html" data-phase="${id}" title="Tactics Board"></iframe>
+            <button class="phase-lock-btn" id="lock-${id}">Lock In Diagram →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('btn-add-custom-section').insertAdjacentElement('beforebegin', card);
+  customSections[id] = { title: '', notes: '', boardLocked: false };
+
+  card.querySelector('input').addEventListener('input', e => {
+    customSections[id].title = e.target.value;
+    autoSave();
+  });
+  card.querySelector('textarea').addEventListener('input', e => {
+    customSections[id].notes = e.target.value;
+    autoSave();
+  });
+
+  const wrap = card.querySelector('.phase-tactics-iframe-wrap');
+  card.querySelector('.phase-tactics-toggle').addEventListener('click', () => {
+    wrap.classList.toggle('open');
+  });
+  card.querySelector('.phase-lock-btn').addEventListener('click', () => {
+    const iframe = wrap.querySelector('iframe');
+    iframe._pendingPhase = id;
+    iframe.contentWindow.postMessage('matchday:getState', '*');
+  });
+
+  document.getElementById('title-' + id).focus();
+  autoSave();
 });
 </script>
 </body>

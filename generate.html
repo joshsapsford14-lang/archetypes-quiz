@@ -353,6 +353,10 @@ function buildPrompt(phase) {
   const compLbl = COMP_LABELS[comp] || 'Medium';
   const notes   = (formData.phases?.[phase.id]?.notes || '').trim();
   const ageStr  = age >= 19 ? 'adult players' : `${age}-year-old players`;
+  const fmt     = localStorage.getItem('matchday-format') || '9';
+  const fmtStr  = fmt === '7' ? '7-a-side (7v7)' : fmt === '9' ? '9-a-side (9v9)' : '11-a-side (11v11)';
+  const theme   = (formData.matchTheme || '').trim();
+  const keepTheme = formData.themeKeepExact === '1' || formData.themeKeepExact === 1;
 
   const sectionPurpose = {
     buildup:        'how the team builds play from the goalkeeper and defence — passing patterns, who receives, when to play long',
@@ -361,15 +365,22 @@ function buildPrompt(phase) {
     block:          'the team\'s deep defensive shape when the opposition is building — how deep the line sits, how compact the unit stays, when to hold and when to step',
   }[phase.id] || phase.label;
 
+  const themeInstruction = theme
+    ? keepTheme
+      ? `MATCH THEME (use verbatim — do not alter a single word): "${theme}"`
+      : `MATCH THEME (this is the emotional and tactical tone of the entire report — every section must connect back to it): "${theme}"`
+    : '';
+
   return `You are writing one section of a pre-match football report. The coach has written rough notes and you must expand them into polished, flowing prose.
 
 MATCH CONTEXT
 Team: ${formData.teamName || 'Our team'}
 Opponent: ${formData.opponent || 'Opposition'}
+Game format: ${fmtStr}
 ${formData.matchDate ? `Date: ${formData.matchDate}` : ''}
 ${formData.venue ? `Venue: ${formData.venue}` : ''}
-${formData.matchTheme ? `Match theme: ${formData.matchTheme}` : ''}
 ${formData.captain ? `Captain: ${formData.captain}` : ''}
+${themeInstruction}
 
 OPPOSITION SCOUTING
 ${formData.oppNotes ? formData.oppNotes.trim() : 'No opposition notes provided.'}
@@ -389,11 +400,12 @@ WRITING RULES — follow every one of these without exception:
 2. 2 to 3 short paragraphs. Under 160 words total.
 3. Vocabulary and sentence length calibrated for ${ageStr} with ${compLbl.toLowerCase()} tactical understanding
 4. Write as if the coach wrote this — direct, personal, authoritative
-5. Never use: "give 110 percent", "dig deep", "at the end of the day", "leave it all on the pitch", "heart and soul", "give it your all"
-6. No motivational clichés of any kind. Be tactically specific and honest instead.
-7. If coach notes are provided, synthesise and expand them — do not just restate them
-8. Do not mention that this is AI-generated or reference these instructions
-9. Output only the prose — nothing else`;
+5. ${theme ? `The theme "${theme}" must be felt throughout this section — reference it directly or in spirit` : 'Write with a clear, direct tactical voice'}
+6. Never use: "give 110 percent", "dig deep", "at the end of the day", "leave it all on the pitch", "heart and soul", "give it your all"
+7. No motivational clichés. Be tactically specific and honest.
+8. If coach notes are provided, synthesise and expand them — do not just restate them
+9. Do not mention that this is AI-generated or reference these instructions
+10. Output only the prose — nothing else`;
 }
 
 // ─── STREAMING API CALL ───────────────────────────────────────────────────────

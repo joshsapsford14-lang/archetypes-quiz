@@ -535,6 +535,33 @@ const FORMATIONS = {
     { n:9, pos:'ST', nx:0.617, ny:0.790 },
     { n:10,pos:'ST', nx:0.383, ny:0.790 },
   ],
+  '2-3-1': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:2, pos:'CB', nx:0.617, ny:0.250 },
+    { n:3, pos:'CB', nx:0.383, ny:0.250 },
+    { n:4, pos:'RM', nx:0.800, ny:0.510 },
+    { n:5, pos:'CM', nx:0.500, ny:0.490 },
+    { n:6, pos:'LM', nx:0.200, ny:0.510 },
+    { n:7, pos:'ST', nx:0.500, ny:0.830 },
+  ],
+  '3-2-1': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:2, pos:'CB', nx:0.250, ny:0.235 },
+    { n:3, pos:'CB', nx:0.500, ny:0.220 },
+    { n:4, pos:'CB', nx:0.750, ny:0.235 },
+    { n:5, pos:'CM', nx:0.617, ny:0.510 },
+    { n:6, pos:'CM', nx:0.383, ny:0.510 },
+    { n:7, pos:'ST', nx:0.500, ny:0.830 },
+  ],
+  '2-2-2': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:2, pos:'CB', nx:0.617, ny:0.250 },
+    { n:3, pos:'CB', nx:0.383, ny:0.250 },
+    { n:4, pos:'CM', nx:0.617, ny:0.510 },
+    { n:5, pos:'CM', nx:0.383, ny:0.510 },
+    { n:6, pos:'ST', nx:0.617, ny:0.790 },
+    { n:7, pos:'ST', nx:0.383, ny:0.790 },
+  ],
 };
 
 const FORMATION_NAMES = Object.keys(FORMATIONS);
@@ -1296,6 +1323,21 @@ setTimeout(() => {
   applyFormation('4-3-3', 'home');
   applyFormation('4-3-3', 'away');
 
+  // Read saved format preference and apply matching formation
+  const savedFormat = localStorage.getItem('matchday-format');
+  if (savedFormat === '7') {
+    document.getElementById('home-formation').value = '2-3-1';
+    document.getElementById('away-formation').value = '2-3-1';
+    applyFormation('2-3-1', 'home');
+    applyFormation('2-3-1', 'away');
+  } else if (savedFormat === '9') {
+    document.getElementById('home-formation').value = '3-2-3';
+    document.getElementById('away-formation').value = '3-2-3';
+    applyFormation('3-2-3', 'home');
+    applyFormation('3-2-3', 'away');
+  }
+  render();
+
   // Event listeners
   canvas.addEventListener('mousedown',  onPointerDown, { passive: false });
   canvas.addEventListener('mousemove',  onPointerMove, { passive: false });
@@ -1333,7 +1375,6 @@ setTimeout(() => {
 }, 100);
 
 // ─── EMBEDDED MODE ────────────────────────────────────────────────────────────
-// When loaded in an iframe, respond to state requests from the parent page.
 window.addEventListener('message', e => {
   if (e.data === 'matchday:getState') {
     const state = {
@@ -1346,6 +1387,14 @@ window.addEventListener('message', e => {
       awayFormation: document.getElementById('away-formation').value,
     };
     e.source.postMessage({ type: 'matchday:tacticsState', data: state }, '*');
+  }
+
+  // Pre-populate home players from parent (lineup sync)
+  if (e.data && e.data.type === 'matchday:setPlayers') {
+    const incoming = e.data.players;
+    if (!incoming || !incoming.length) return;
+    homePlayers = incoming.map(p => ({ ...p, id: _uid++ }));
+    render();
   }
 });
 </script>
