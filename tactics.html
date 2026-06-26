@@ -1015,6 +1015,28 @@ function restoreState(snapshot) {
   awayArrows  = snapshot.awayArrows.map(a => ({ ...a }));
 }
 
+// Clone an entire locked board (both teams, formations, arrows, names, notes,
+// exact positions) so a per-phase board opens identical to the first section.
+function applyFullBoard(data) {
+  if (!data) return;
+  if (Array.isArray(data.homePlayers)) homePlayers = data.homePlayers.map(p => ({ ...p, id: _uid++ }));
+  if (Array.isArray(data.awayPlayers)) awayPlayers = data.awayPlayers.map(p => ({ ...p, id: _uid++ }));
+  if (Array.isArray(data.homeArrows))  homeArrows  = data.homeArrows.map(a => ({ ...a, id: _uid++ }));
+  if (Array.isArray(data.awayArrows))  awayArrows  = data.awayArrows.map(a => ({ ...a, id: _uid++ }));
+  // Reflect the locked formations in the dropdowns (add the option if the
+  // current format filter wouldn't otherwise include it).
+  for (const [id, val] of [['home-formation', data.homeFormation], ['away-formation', data.awayFormation]]) {
+    if (!val) continue;
+    const sel = document.getElementById(id);
+    if (sel && !Array.from(sel.options).some(o => o.value === val)) {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = val;
+      sel.appendChild(opt);
+    }
+    if (sel) sel.value = val;
+  }
+}
+
 function savePhase() {
   phases[currentPhaseIdx] = captureState();
   updatePhaseUI();
@@ -1446,14 +1468,18 @@ setTimeout(() => {
   applyFormation(def, 'home');
   applyFormation(def, 'away');
 
-  // Per-phase boards inherit the locked roster (names/numbers/positions) so the
-  // coach never re-enters the lineup. Signalled via ?roster=1 on the iframe src.
+  // Per-phase boards open as an exact clone of the locked first board — same
+  // formations, both teams, names, positions and notes. Signalled via ?roster=1.
   const params = new URLSearchParams(location.search);
   if (params.get('roster') === '1') {
     try {
-      const saved = JSON.parse(localStorage.getItem('matchday-roster') || 'null');
-      if (saved && saved.length) {
-        homePlayers = saved.map(p => ({ ...p, id: _uid++ }));
+      const board = JSON.parse(localStorage.getItem('matchday-board') || 'null');
+      if (board) {
+        applyFullBoard(board);
+      } else {
+        // Backwards-compat: older saves only stored the home roster.
+        const saved = JSON.parse(localStorage.getItem('matchday-roster') || 'null');
+        if (saved && saved.length) homePlayers = saved.map(p => ({ ...p, id: _uid++ }));
       }
     } catch (e) {}
   }
@@ -1522,7 +1548,13 @@ window.addEventListener('message', e => {
     e.source.postMessage({ type: 'matchday:tacticsState', data: state }, '*');
   }
 
-  // Pre-populate home players from parent (lineup sync)
+  // Clone the full locked board from the parent (both teams, formations, names).
+  if (e.data && e.data.type === 'matchday:setBoard') {
+    applyFullBoard(e.data.board);
+    if (ctx) render();
+  }
+
+  // Pre-populate home players from parent (legacy lineup sync).
   if (e.data && e.data.type === 'matchday:setPlayers') {
     const incoming = e.data.players;
     if (!incoming || !incoming.length) return;

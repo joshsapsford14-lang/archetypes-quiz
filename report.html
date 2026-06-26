@@ -1165,7 +1165,7 @@ window.addEventListener('message', e => {
     locked.style.display = 'flex';
     document.getElementById('tactics-iframe-wrap').style.display = 'none';
     document.getElementById('btn-lock-tactics').style.display = 'none';
-    syncPlayersToPhaseBoards(tacticsData.homePlayers);
+    syncBoardToPhaseBoards(tacticsData);
     autoSave();
   }
 });
@@ -1215,20 +1215,19 @@ document.getElementById('theme-mode-toggle').addEventListener('click', () => {
 
 // ─── PLAYER SYNC: main board → per-phase boards ───────────────────────────────
 // When the main lineup board is locked, broadcast player names to all open phase boards
-function syncPlayersToPhaseBoards(players) {
-  // Persist the locked roster so every per-phase board (even ones not yet
-  // opened) inherits names/numbers/positions on load — no re-entering lineups.
-  try { localStorage.setItem('matchday-roster', JSON.stringify(players || [])); } catch(e) {}
-  // Reload any per-phase boards so they pick up the roster cleanly. We only
-  // reload phase boards (?roster=1), never the main creation board.
-  // Push to every already-loaded phase board. Boards opened later (or custom
-  // sections added after lock-in) read the saved roster on load instead.
+function syncBoardToPhaseBoards(board) {
+  if (!board) return;
+  // Persist the entire locked board so every per-phase board (even ones not yet
+  // opened, or custom sections added later) opens as an exact clone on load.
+  try { localStorage.setItem('matchday-board', JSON.stringify(board)); } catch(e) {}
+  // Push to every already-loaded phase board so open ones update immediately.
   document.querySelectorAll('.phase-tactics-iframe-wrap iframe').forEach(iframe => {
     try {
-      iframe.contentWindow.postMessage({ type: 'matchday:setPlayers', players }, '*');
+      iframe.contentWindow.postMessage({ type: 'matchday:setBoard', board }, '*');
     } catch(e) {}
   });
-  // Also auto-fill lineup textarea if empty
+  // Auto-fill the lineup textarea from the home team if it's still empty.
+  const players = board.homePlayers || [];
   const lineupField = document.getElementById('lineup');
   if (!lineupField.value.trim() && players.length) {
     lineupField.value = players
