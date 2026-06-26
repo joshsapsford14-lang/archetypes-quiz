@@ -321,11 +321,12 @@ body {
 
 <script>
 // ─── PHASE DEFINITIONS ───────────────────────────────────────────────────────
-const PHASES = [
+const ALL_PHASES = [
   { id: 'buildup',      label: 'Buildup',       tag: 'IN POSSESSION'     },
   { id: 'press',        label: 'Press',          tag: 'OUT OF POSSESSION' },
   { id: 'rest-defence', label: 'Rest Defence',   tag: 'TRANSITION'        },
   { id: 'block',        label: 'Block',          tag: 'DEFENSIVE'         },
+  { id: 'mentality',    label: 'Mentality',      tag: 'MINDSET'           },
 ];
 
 const COMP_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
@@ -341,6 +342,12 @@ try {
   const raw = localStorage.getItem('matchday-report-form');
   if (raw) formData = JSON.parse(raw);
 } catch(e) {}
+
+// Only generate sections the coach actually kept. If a section was removed on
+// the report page it won't appear in formData.phases, so we filter it out here.
+const PHASES = (formData.phases && Object.keys(formData.phases).length)
+  ? ALL_PHASES.filter(ph => formData.phases[ph.id])
+  : ALL_PHASES.filter(ph => ph.id !== 'mentality');
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const generated = {}; // phaseId → text
@@ -363,6 +370,7 @@ function buildPrompt(phase) {
     press:          'how and when the team presses out of possession — the triggers, the shape, who leads it and who covers',
     'rest-defence': 'the team\'s defensive shape when the ball is in the opponent\'s attacking half but not won back — compactness, positioning, holding the line',
     block:          'the team\'s deep defensive shape when the opposition is building — how deep the line sits, how compact the unit stays, when to hold and when to step',
+    mentality:      'the mindset and attitude the team carries into the match — body language, response to setbacks, energy, leadership and what a good performance looks like today',
   }[phase.id] || phase.label;
 
   const themeInstruction = theme

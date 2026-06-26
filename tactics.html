@@ -327,6 +327,43 @@ select {
   transition: none;
 }
 
+/* INFO CARD (tap a player to view their role) */
+#info-card {
+  position: absolute;
+  z-index: 60;
+  width: 220px;
+  background: var(--card);
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.55);
+}
+#info-card.hidden { display: none; }
+.info-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.info-num {
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+  background: var(--gold); color: var(--black); border-radius: 5px; padding: 2px 7px;
+}
+.info-name { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: .04em; color: var(--white); }
+.info-pos {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin-left: auto;
+}
+.info-notes {
+  font-size: 13px; line-height: 1.5; color: var(--body); white-space: pre-wrap;
+  border-top: 1px solid var(--border); padding-top: 8px; min-height: 18px;
+}
+.info-notes.empty { color: var(--muted); font-style: italic; }
+.info-actions { display: flex; gap: 6px; margin-top: 10px; }
+.info-actions button {
+  flex: 1; padding: 6px; border-radius: 6px; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+  background: transparent; color: var(--body); transition: all .15s;
+}
+#info-edit { background: var(--gold); border-color: var(--gold); color: var(--black); }
+#info-edit:hover { background: #d4a82e; }
+#info-close:hover { border-color: var(--gold-dim); color: var(--white); }
+
 /* HINT */
 #hint {
   padding: 6px 12px;
@@ -405,11 +442,29 @@ select {
       <label>Position</label>
       <input id="edit-pos" type="text" placeholder="e.g. ST, CB, GK">
     </div>
+    <div class="field-row">
+      <label>Notes for this phase</label>
+      <textarea id="edit-notes" placeholder="e.g. Show inside, drop to receive between the lines" rows="3"
+        style="width:100%;background:var(--black);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:vertical"></textarea>
+    </div>
     <div class="modal-actions">
       <button id="edit-save">Save</button>
       <button id="edit-cancel">Cancel</button>
     </div>
     <button id="edit-remove">Remove player</button>
+  </div>
+</div>
+
+<div id="info-card" class="hidden">
+  <div class="info-head">
+    <span class="info-num" id="info-num"></span>
+    <span class="info-name" id="info-name"></span>
+    <span class="info-pos" id="info-pos"></span>
+  </div>
+  <div class="info-notes" id="info-notes"></div>
+  <div class="info-actions">
+    <button id="info-edit">Edit</button>
+    <button id="info-close">Close</button>
   </div>
 </div>
 
@@ -650,13 +705,14 @@ let _uid = 1;
 function makePlayer(slot, team) {
   const pos = formToFullNorm(slot.nx, slot.ny, team);
   return {
-    id:   _uid++,
+    id:    _uid++,
     team,
-    n:    slot.n,
-    name: '',
-    pos:  slot.pos,
-    pnx:  pos.pnx,
-    pny:  pos.pny,
+    n:     slot.n,
+    name:  '',
+    pos:   slot.pos,
+    notes: '',
+    pnx:   pos.pnx,
+    pny:   pos.pny,
   };
 }
 
@@ -908,6 +964,7 @@ function drawNameTag(cx, cy, text, bg, fg) {
 
 // ─── RENDER ───────────────────────────────────────────────────────────────────
 function render(overridePlayers) {
+  if (!ctx) return;
   const dpr = window.devicePixelRatio || 1;
   ctx.save();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1095,12 +1152,14 @@ function stopAnimation() {
 
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
 function openEditModal(player) {
+  closeInfoCard();
   editTarget = player;
   document.getElementById('edit-team-label').textContent =
     player.team === 'home' ? 'HOME' : 'AWAY';
   document.getElementById('edit-number').value = player.n;
   document.getElementById('edit-name').value   = player.name || '';
   document.getElementById('edit-pos').value    = player.pos  || '';
+  document.getElementById('edit-notes').value  = player.notes || '';
   document.getElementById('edit-modal').classList.remove('hidden');
   setTimeout(() => document.getElementById('edit-name').focus(), 50);
 }
@@ -1115,8 +1174,42 @@ function saveEdit() {
   editTarget.n    = parseInt(document.getElementById('edit-number').value) || editTarget.n;
   editTarget.name = document.getElementById('edit-name').value.trim();
   editTarget.pos  = document.getElementById('edit-pos').value.trim();
+  editTarget.notes = document.getElementById('edit-notes').value.trim();
   closeEditModal();
   render();
+}
+
+// ─── INFO CARD (tap a player to see their role & notes) ────────────────────────
+let infoTarget = null;
+function showInfoCard(player) {
+  infoTarget = player;
+  document.getElementById('info-num').textContent  = player.n;
+  document.getElementById('info-name').textContent = player.name || 'Unnamed';
+  document.getElementById('info-pos').textContent  = player.pos || '';
+  const notesEl = document.getElementById('info-notes');
+  if (player.notes) {
+    notesEl.textContent = player.notes;
+    notesEl.classList.remove('empty');
+  } else {
+    notesEl.textContent = 'No notes yet — tap Edit to add instructions.';
+    notesEl.classList.add('empty');
+  }
+  const card = document.getElementById('info-card');
+  card.classList.remove('hidden');
+  // Position near the player, kept within the canvas container.
+  const { x, y } = normToCanvas(player.pnx, player.pny);
+  const cont = document.getElementById('canvas-container');
+  const cardW = 220, cardH = card.offsetHeight || 130;
+  let left = x + 24, top = y - cardH / 2;
+  if (left + cardW > cont.clientWidth - 8) left = x - cardW - 24;
+  left = Math.max(8, Math.min(left, cont.clientWidth - cardW - 8));
+  top  = Math.max(8, Math.min(top, cont.clientHeight - cardH - 8));
+  card.style.left = left + 'px';
+  card.style.top  = top + 'px';
+}
+function closeInfoCard() {
+  document.getElementById('info-card').classList.add('hidden');
+  infoTarget = null;
 }
 
 function removePlayer() {
@@ -1136,7 +1229,7 @@ function addPlayer(team) {
   const pny = team === 'home' ? 0.75 : 0.25;
   const list = team === 'home' ? homePlayers : awayPlayers;
   const maxN = list.reduce((m, p) => Math.max(m, p.n), 0);
-  const p = { id: _uid++, team, n: maxN + 1, name: '', pos: 'SUB', pnx, pny };
+  const p = { id: _uid++, team, n: maxN + 1, name: '', pos: 'SUB', notes: '', pnx, pny };
   list.push(p);
   render();
   // Open edit modal immediately so coach can name them
@@ -1209,8 +1302,19 @@ function onPointerUp(e) {
   e.preventDefault();
 
   if (dragging) {
+    const wasTap = !dragging.moved;
+    const tappedPlayer = dragging.player;
     dragging = null;
     render();
+    // A tap that didn't move and isn't the first half of a double-tap shows the info card.
+    if (wasTap) {
+      const tp = tappedPlayer;
+      setTimeout(() => {
+        // If a double-tap opened the edit modal in the meantime, don't show info.
+        if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
+        showInfoCard(tp);
+      }, 260);
+    }
   } else if (drawing) {
     const { cx, cy } = e.changedTouches
       ? { cx: e.changedTouches[0].clientX - canvas.getBoundingClientRect().left,
@@ -1298,6 +1402,9 @@ function exportJSON() {
 function initCanvas() {
   const container = document.getElementById('canvas-container');
   const cssW = container.clientWidth;
+  // Bail if the board isn't visible yet (e.g. inside a collapsed section) —
+  // a zero/negative width would produce negative pitch radii and throw.
+  if (cssW <= 0) return;
   const cssH = Math.round(cssW * PITCH_RATIO + PITCH_PAD_Y * 2);
 
   canvas.style.width  = cssW + 'px';
@@ -1338,6 +1445,18 @@ setTimeout(() => {
   document.getElementById('away-formation').value = def;
   applyFormation(def, 'home');
   applyFormation(def, 'away');
+
+  // Per-phase boards inherit the locked roster (names/numbers/positions) so the
+  // coach never re-enters the lineup. Signalled via ?roster=1 on the iframe src.
+  const params = new URLSearchParams(location.search);
+  if (params.get('roster') === '1') {
+    try {
+      const saved = JSON.parse(localStorage.getItem('matchday-roster') || 'null');
+      if (saved && saved.length) {
+        homePlayers = saved.map(p => ({ ...p, id: _uid++ }));
+      }
+    } catch (e) {}
+  }
   // NOTE: do not call render() here — ctx is not created until initCanvas() below.
 
   // Event listeners
@@ -1368,12 +1487,24 @@ setTimeout(() => {
   document.getElementById('modal-backdrop').addEventListener('click', closeEditModal);
   document.getElementById('btn-add-home').addEventListener('click', () => addPlayer('home'));
   document.getElementById('btn-add-away').addEventListener('click', () => addPlayer('away'));
+  document.getElementById('info-close').addEventListener('click', closeInfoCard);
+  document.getElementById('info-edit').addEventListener('click', () => { if (infoTarget) openEditModal(infoTarget); });
   document.getElementById('edit-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });
   document.getElementById('edit-pos').addEventListener('keydown',  e => { if (e.key === 'Enter') saveEdit(); });
   document.getElementById('edit-number').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });
 
   initCanvas();
   updatePhaseUI();
+
+  // Re-init when the container changes size — handles a board being revealed
+  // after its section is expanded (display:none → block gives it real width).
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      const w = document.getElementById('canvas-container').clientWidth;
+      if (w > 0 && w !== cw) initCanvas();
+    });
+    ro.observe(document.getElementById('canvas-container'));
+  }
 }, 100);
 
 // ─── EMBEDDED MODE ────────────────────────────────────────────────────────────
@@ -1396,7 +1527,7 @@ window.addEventListener('message', e => {
     const incoming = e.data.players;
     if (!incoming || !incoming.length) return;
     homePlayers = incoming.map(p => ({ ...p, id: _uid++ }));
-    render();
+    if (ctx) render();
   }
 });
 </script>

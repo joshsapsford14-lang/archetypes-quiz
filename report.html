@@ -318,6 +318,18 @@ input[type=range]::-moz-range-thumb {
   flex: 1;
   transition: color .15s;
 }
+.phase-delete {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  transition: color .15s;
+}
+.phase-delete:hover { color: #FF5050; }
 .phase-chevron {
   font-size: 16px;
   color: var(--muted);
@@ -783,6 +795,13 @@ const PHASES = [
     num:         'DEFENSIVE',
     placeholder: 'Deep defensive shape. Where does the line sit? How compact? When do you hold, when do you step?',
   },
+  {
+    id:          'mentality',
+    label:       'Mentality',
+    num:         'MINDSET',
+    placeholder: 'How do you want the team to carry themselves? Body language, response to setbacks, energy, leadership, what "good" looks like today.',
+    noBoard:     true,
+  },
 ];
 
 // ─── LANGUAGE PREVIEW STRINGS ─────────────────────────────────────────────────
@@ -811,35 +830,55 @@ function getLangPreview(age, comp) {
 // Each phase: coach notes textarea + optional per-phase tactics board
 const phaseBoards = {}; // id → locked tactics state
 
+// Sections the coach has removed (persisted across reloads).
+let removedPhases = new Set();
+try {
+  const _d = JSON.parse(localStorage.getItem('matchday-report-form') || '{}');
+  if (_d.removedPhases) removedPhases = new Set(_d.removedPhases);
+} catch (e) {}
+
+function removePhaseSection(card, phId) {
+  card.remove();
+  delete phaseBoards[phId];
+  removedPhases.add(phId);
+  autoSave();
+}
+
 function buildPhases() {
   const container = document.getElementById('tactical-phases');
   for (const ph of PHASES) {
+    if (removedPhases.has(ph.id)) continue;
     const card = document.createElement('div');
     card.className = 'phase-card';
     card.id = 'phase-' + ph.id;
-    card.innerHTML = `
-      <div class="phase-header">
-        <span class="phase-num">${ph.num}</span>
-        <span class="phase-title">${ph.label}</span>
-        <span class="phase-chevron">▼</span>
-      </div>
-      <div class="phase-body">
-        <div class="phase-body-inner">
-          <span class="phase-notes-label">Coach's instructions</span>
-          <textarea id="notes-${ph.id}" placeholder="${ph.placeholder}"></textarea>
+
+    const boardHTML = ph.noBoard ? '' : `
           <div class="phase-tactics-area">
             <button class="phase-tactics-toggle" id="tactics-toggle-${ph.id}">
               <span>⊕ Add tactics board diagram</span>
             </button>
             <div class="phase-tactics-iframe-wrap" id="tactics-wrap-${ph.id}">
               <iframe
-                src="tactics.html"
+                src="tactics.html?roster=1"
                 data-phase="${ph.id}"
                 title="Tactics Board — ${ph.label}"
               ></iframe>
               <button class="phase-lock-btn" id="lock-${ph.id}">Lock In Diagram →</button>
             </div>
-          </div>
+          </div>`;
+
+    card.innerHTML = `
+      <div class="phase-header">
+        <span class="phase-num">${ph.num}</span>
+        <span class="phase-title">${ph.label}</span>
+        <button class="phase-delete" title="Remove this section">×</button>
+        <span class="phase-chevron">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <span class="phase-notes-label">Coach's instructions</span>
+          <textarea id="notes-${ph.id}" placeholder="${ph.placeholder}"></textarea>
+          ${boardHTML}
         </div>
       </div>
     `;
@@ -849,28 +888,29 @@ function buildPhases() {
       card.classList.toggle('open');
     });
 
-    // Tactics board toggle
-    const tacticsToggleBtn = card.querySelector('.phase-tactics-toggle');
-    const wrap = card.querySelector('.phase-tactics-iframe-wrap');
-    tacticsToggleBtn.addEventListener('click', e => {
+    // Delete section
+    card.querySelector('.phase-delete').addEventListener('click', e => {
       e.stopPropagation();
-      const isOpen = wrap.classList.contains('open');
-      if (isOpen && phaseBoards[ph.id]) {
-        // Already locked — clicking again just reopens
-        wrap.classList.toggle('open');
-      } else {
-        wrap.classList.toggle('open');
-      }
+      if (confirm(`Remove the "${ph.label}" section?`)) removePhaseSection(card, ph.id);
     });
 
-    // Lock in button
-    card.querySelector('.phase-lock-btn').addEventListener('click', e => {
-      e.stopPropagation();
-      const iframe = wrap.querySelector('iframe');
-      iframe.contentWindow.postMessage('matchday:getState', '*');
-      // Tag this request so the message handler knows which phase
-      iframe._pendingPhase = ph.id;
-    });
+    if (!ph.noBoard) {
+      // Tactics board toggle
+      const tacticsToggleBtn = card.querySelector('.phase-tactics-toggle');
+      const wrap = card.querySelector('.phase-tactics-iframe-wrap');
+      tacticsToggleBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        wrap.classList.toggle('open');
+      });
+
+      // Lock in button
+      card.querySelector('.phase-lock-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        const iframe = wrap.querySelector('iframe');
+        iframe.contentWindow.postMessage('matchday:getState', '*');
+        iframe._pendingPhase = ph.id;
+      });
+    }
 
     // Notes auto-save
     card.querySelector('textarea').addEventListener('input', autoSave);
@@ -942,6 +982,7 @@ function saveForm() {
 
   const phases = {};
   for (const ph of PHASES) {
+    if (removedPhases.has(ph.id)) continue;
     phases[ph.id] = {
       notes:       (document.getElementById('notes-' + ph.id) || {}).value || '',
       boardLocked: !!phaseBoards[ph.id],
@@ -964,6 +1005,7 @@ function saveForm() {
     gameFormat:     currentFormat,
     themeKeepExact: document.getElementById('theme-keep-exact').value,
     phases,
+    removedPhases:  [...removedPhases],
   };
   localStorage.setItem('matchday-report-form', JSON.stringify(data));
 }
@@ -1148,7 +1190,7 @@ document.querySelectorAll('.format-btn').forEach(b => {
   b.addEventListener('click', () => {
     applyFormatUI(b.dataset.format);
     // Reload any tactics boards so they pick up the new format & formations.
-    document.querySelectorAll('iframe[src="tactics.html"]').forEach(f => {
+    document.querySelectorAll('iframe[src^="tactics.html"]').forEach(f => {
       f.src = f.src;
     });
   });
@@ -1174,6 +1216,13 @@ document.getElementById('theme-mode-toggle').addEventListener('click', () => {
 // ─── PLAYER SYNC: main board → per-phase boards ───────────────────────────────
 // When the main lineup board is locked, broadcast player names to all open phase boards
 function syncPlayersToPhaseBoards(players) {
+  // Persist the locked roster so every per-phase board (even ones not yet
+  // opened) inherits names/numbers/positions on load — no re-entering lineups.
+  try { localStorage.setItem('matchday-roster', JSON.stringify(players || [])); } catch(e) {}
+  // Reload any per-phase boards so they pick up the roster cleanly. We only
+  // reload phase boards (?roster=1), never the main creation board.
+  // Push to every already-loaded phase board. Boards opened later (or custom
+  // sections added after lock-in) read the saved roster on load instead.
   document.querySelectorAll('.phase-tactics-iframe-wrap iframe').forEach(iframe => {
     try {
       iframe.contentWindow.postMessage({ type: 'matchday:setPlayers', players }, '*');
@@ -1217,7 +1266,7 @@ document.getElementById('btn-add-custom-section').addEventListener('click', () =
             <span>⊕ Add tactics board diagram</span>
           </button>
           <div class="phase-tactics-iframe-wrap" id="tactics-wrap-${id}">
-            <iframe src="tactics.html" data-phase="${id}" title="Tactics Board"></iframe>
+            <iframe src="tactics.html?roster=1" data-phase="${id}" title="Tactics Board"></iframe>
             <button class="phase-lock-btn" id="lock-${id}">Lock In Diagram →</button>
           </div>
         </div>

@@ -410,6 +410,7 @@ const PHASES = [
   { id: 'press',        label: 'Press',          num: 'OUT OF POSSESSION' },
   { id: 'rest-defence', label: 'Rest Defence',   num: 'TRANSITION'      },
   { id: 'block',        label: 'Block',          num: 'DEFENSIVE'       },
+  { id: 'mentality',    label: 'Mentality',      num: 'MINDSET'         },
 ];
 
 const COMP_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
@@ -531,6 +532,8 @@ function render(data) {
   container.appendChild(el('div', 'section-header', 'Tactical Phases'));
 
   for (const ph of PHASES) {
+    // Skip sections the coach removed (absent from saved phases).
+    if (data.phases && Object.keys(data.phases).length && !data.phases[ph.id]) continue;
     const phData = (data.phases && data.phases[ph.id]) || {};
     const notes  = (phData.notes || '').trim();
     const hasBoard = phData.boardLocked;
