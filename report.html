@@ -1145,7 +1145,13 @@ function applyFormatUI(fmt) {
 }
 
 document.querySelectorAll('.format-btn').forEach(b => {
-  b.addEventListener('click', () => applyFormatUI(b.dataset.format));
+  b.addEventListener('click', () => {
+    applyFormatUI(b.dataset.format);
+    // Reload any tactics boards so they pick up the new format & formations.
+    document.querySelectorAll('iframe[src="tactics.html"]').forEach(f => {
+      f.src = f.src;
+    });
+  });
 });
 applyFormatUI(currentFormat);
 

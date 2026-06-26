@@ -1230,11 +1230,20 @@ function onPointerUp(e) {
 }
 
 // ─── FORMATION SELECTS ────────────────────────────────────────────────────────
-function buildFormationSelects() {
+// Player count per format ('7' → 7 outfield+gk etc.)
+function formatToCount(fmt) {
+  return fmt === '7' ? 7 : fmt === '9' ? 9 : fmt === '11' ? 11 : null;
+}
+
+function buildFormationSelects(filterCount) {
+  // Only show formations whose squad size matches the chosen game format.
+  const names = filterCount
+    ? FORMATION_NAMES.filter(n => FORMATIONS[n].length === filterCount)
+    : FORMATION_NAMES;
   for (const id of ['home-formation', 'away-formation']) {
     const sel = document.getElementById(id);
     sel.innerHTML = '';
-    for (const name of FORMATION_NAMES) {
+    for (const name of names) {
       const opt = document.createElement('option');
       opt.value = name; opt.textContent = name;
       sel.appendChild(opt);
@@ -1316,27 +1325,20 @@ window.addEventListener('resize', () => {
 setTimeout(() => {
   canvas = document.getElementById('pitch');
 
-  buildFormationSelects();
+  // Read saved game format and only offer formations that fit it.
+  const savedFormat = localStorage.getItem('matchday-format');
+  const count = formatToCount(savedFormat);
+  buildFormationSelects(count);
   buildPhaseSlots();
 
-  // Default formations
-  applyFormation('4-3-3', 'home');
-  applyFormation('4-3-3', 'away');
-
-  // Read saved format preference and apply matching formation
-  const savedFormat = localStorage.getItem('matchday-format');
-  if (savedFormat === '7') {
-    document.getElementById('home-formation').value = '2-3-1';
-    document.getElementById('away-formation').value = '2-3-1';
-    applyFormation('2-3-1', 'home');
-    applyFormation('2-3-1', 'away');
-  } else if (savedFormat === '9') {
-    document.getElementById('home-formation').value = '3-2-3';
-    document.getElementById('away-formation').value = '3-2-3';
-    applyFormation('3-2-3', 'home');
-    applyFormation('3-2-3', 'away');
-  }
-  render();
+  // Default formation matches the format (falls back to first available option).
+  const defaults = { '7': '2-3-1', '9': '3-2-3', '11': '4-3-3' };
+  const def = defaults[savedFormat] || document.getElementById('home-formation').value;
+  document.getElementById('home-formation').value = def;
+  document.getElementById('away-formation').value = def;
+  applyFormation(def, 'home');
+  applyFormation(def, 'away');
+  // NOTE: do not call render() here — ctx is not created until initCanvas() below.
 
   // Event listeners
   canvas.addEventListener('mousedown',  onPointerDown, { passive: false });
