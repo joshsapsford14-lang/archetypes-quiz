@@ -343,11 +343,10 @@ try {
   if (raw) formData = JSON.parse(raw);
 } catch(e) {}
 
-// Only generate sections the coach actually kept. If a section was removed on
-// the report page it won't appear in formData.phases, so we filter it out here.
-const PHASES = (formData.phases && Object.keys(formData.phases).length)
-  ? ALL_PHASES.filter(ph => formData.phases[ph.id])
-  : ALL_PHASES.filter(ph => ph.id !== 'mentality');
+// Only generate sections the coach actually kept — exclude any they removed on
+// the report page. Delete every phase and PHASES is empty (board-only report).
+const _removed = new Set(formData.removedPhases || []);
+const PHASES = ALL_PHASES.filter(ph => !_removed.has(ph.id));
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const generated = {}; // phaseId → text
@@ -581,12 +580,18 @@ async function regenerate(phase) {
 function updateProgress() {
   const done  = Object.keys(generated).length;
   const total = PHASES.length;
-  document.getElementById('progress-bar').style.width = (done / total * 100) + '%';
+  document.getElementById('progress-bar').style.width = (total ? done / total * 100 : 100) + '%';
 }
 
 function checkAllDone() {
   const allDone = PHASES.every(ph => generated[ph.id]);
-  if (allDone) document.getElementById('all-done').style.display = 'block';
+  if (allDone) {
+    if (!PHASES.length) {
+      document.querySelector('#all-done p').textContent =
+        'Your lineup board and player roles are ready. Export as a standalone HTML file.';
+    }
+    document.getElementById('all-done').style.display = 'block';
+  }
 }
 
 // ─── EXPORT HTML ─────────────────────────────────────────────────────────────
@@ -619,8 +624,36 @@ function exportReport() {
     </section>`;
   }).join('');
 
+  // Tactics board snapshot + individual player notes (the locked first board).
+  let board = null;
+  try { board = JSON.parse(localStorage.getItem('matchday-board') || 'null'); } catch(e) {}
+  let boardHtml = '';
+  if (board && (board.snapshot || (board.homePlayers && board.homePlayers.length))) {
+    const imgHtml = board.snapshot
+      ? `<div class="board-img"><img src="${board.snapshot}" alt="Starting lineup and formation"></div>`
+      : '';
+    const noteItems = (board.homePlayers || [])
+      .filter(p => (p.name && p.name.trim()) || (p.notes && p.notes.trim()))
+      .map(p => `
+        <div class="role-item">
+          <span class="role-num">${escHtml(String(p.n || ''))}</span>
+          <div class="role-body">
+            <div class="role-head"><span class="role-name">${escHtml(p.name || 'Unnamed')}</span>${p.pos ? `<span class="role-pos">${escHtml(p.pos)}</span>` : ''}</div>
+            ${p.notes && p.notes.trim() ? `<div class="role-notes">${escHtml(p.notes)}</div>` : ''}
+          </div>
+        </div>`).join('');
+    boardHtml = `
+    <section class="report-section">
+      <div class="section-label">LINEUP</div>
+      <h2>Formation & Roles</h2>
+      ${imgHtml}
+      ${noteItems ? `<div class="role-list">${noteItems}</div>` : ''}
+    </section>`;
+  }
+
   const lineupLines = (data.lineup || '').trim().split('\n').filter(Boolean);
-  const lineupHtml = lineupLines.length
+  // If we have the visual board with roles, don't also print the text lineup.
+  const lineupHtml = (lineupLines.length && !boardHtml)
     ? `<section class="report-section">
         <div class="section-label">SQUAD</div>
         <h2>Starting Lineup</h2>
@@ -668,6 +701,19 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
 .section-prose p{font-size:15px;line-height:1.72;color:var(--body);font-weight:300;margin-bottom:12px}
 .section-prose p:last-child{margin-bottom:0}
 
+/* TACTICS BOARD + ROLES */
+.board-img{margin:4px 0 18px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+.board-img img{display:block;width:100%;height:auto}
+.role-list{display:flex;flex-direction:column;gap:2px}
+.role-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.role-item:last-child{border-bottom:none}
+.role-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;background:var(--gold);color:var(--black);border-radius:5px;padding:2px 8px;height:fit-content;flex-shrink:0}
+.role-body{flex:1;min-width:0}
+.role-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.role-name{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.03em;color:var(--white)}
+.role-pos{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.role-notes{font-size:14px;line-height:1.6;color:var(--body);font-weight:300;margin-top:5px;white-space:pre-wrap}
+
 /* LINEUP */
 .lineup-list{display:flex;flex-direction:column;gap:4px;margin-top:4px}
 .lineup-item{font-size:14px;color:var(--body);padding:6px 0;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;letter-spacing:.03em}
@@ -700,6 +746,7 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
     <div class="countdown" id="countdown"></div>
   </div>
 
+  ${boardHtml}
   ${phaseSections}
   ${lineupHtml}
   ${benchHtml ? `<section class="report-section"><div class="section-label">BENCH</div><h2>Substitutes</h2>${benchHtml}</section>` : ''}
@@ -736,6 +783,9 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 async function init() {
+  // No tactical phases to write (coach kept only the lineup board) — no AI or
+  // API key needed, just show the board report ready to export.
+  if (!PHASES.length) { start(); return; }
   // Check for API key
   const key = getApiKey();
   if (!key) {
@@ -767,7 +817,8 @@ async function start() {
     formData.venue || '',
   ].filter(Boolean).join(' · ');
   document.getElementById('match-header').style.display = 'block';
-  document.getElementById('progress-wrap').style.display = 'block';
+  // Board-only report (no tactical phases): nothing to generate, skip progress.
+  document.getElementById('progress-wrap').style.display = PHASES.length ? 'block' : 'none';
 
   buildCards();
 

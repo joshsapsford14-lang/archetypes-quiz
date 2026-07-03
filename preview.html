@@ -449,6 +449,12 @@ function el(tag, cls, text) {
   return e;
 }
 
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function render(data) {
   const container = document.getElementById('preview-content');
   container.innerHTML = '';
@@ -528,8 +534,36 @@ function render(data) {
   calRow.appendChild(compCard);
   container.appendChild(calRow);
 
+  // ── LINEUP BOARD & ROLES ─────────────────────────────────────────────────
+  let board = null;
+  try { board = JSON.parse(localStorage.getItem('matchday-board') || 'null'); } catch(e) {}
+  if (board && (board.snapshot || (board.homePlayers && board.homePlayers.length))) {
+    container.appendChild(el('div', 'section-header', 'Lineup & Roles'));
+    const bc = el('div', 'lineup-card');
+    if (board.snapshot) {
+      const img = document.createElement('img');
+      img.src = board.snapshot;
+      img.style.cssText = 'display:block;width:100%;height:auto;border-radius:8px;margin-bottom:10px';
+      bc.appendChild(img);
+    }
+    const withNotes = (board.homePlayers || []).filter(p => (p.name && p.name.trim()) || (p.notes && p.notes.trim()));
+    for (const p of withNotes) {
+      const row = el('div', 'bench-preview-row');
+      row.style.alignItems = 'flex-start';
+      row.innerHTML = `
+        <span class="lineup-num">${p.n || '—'}</span>
+        <div style="flex:1;min-width:0">
+          <div><span class="lineup-name">${escHtml(p.name || 'Unnamed')}</span>${p.pos ? ` <span class="lineup-pos">${escHtml(p.pos)}</span>` : ''}</div>
+          ${p.notes && p.notes.trim() ? `<div style="font-size:13px;color:var(--body);line-height:1.5;margin-top:3px;white-space:pre-wrap">${escHtml(p.notes)}</div>` : ''}
+        </div>`;
+      bc.appendChild(row);
+    }
+    container.appendChild(bc);
+  }
+
   // ── TACTICAL PHASES ────────────────────────────────────────────────────────
-  container.appendChild(el('div', 'section-header', 'Tactical Phases'));
+  const visiblePhases = PHASES.filter(ph => !(data.phases && Object.keys(data.phases).length && !data.phases[ph.id]));
+  if (visiblePhases.length) container.appendChild(el('div', 'section-header', 'Tactical Phases'));
 
   for (const ph of PHASES) {
     // Skip sections the coach removed (absent from saved phases).

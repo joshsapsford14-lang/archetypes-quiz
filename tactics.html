@@ -1544,6 +1544,7 @@ window.addEventListener('message', e => {
       phases: phases.map((ph, i) => ph ? { index: i, ...ph } : null),
       homeFormation: document.getElementById('home-formation').value,
       awayFormation: document.getElementById('away-formation').value,
+      snapshot: (canvas && homePlayers.length) ? canvas.toDataURL('image/png') : '',
     };
     e.source.postMessage({ type: 'matchday:tacticsState', data: state }, '*');
   }
