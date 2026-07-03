@@ -828,7 +828,31 @@ async function start() {
     updateProgress();
   }
 
-  checkAllDone();
+  revealExport();
+}
+
+// Always let the coach export once generation has run — even if some (or all)
+// AI sections errored, the board, roles and any successful text are exportable.
+function revealExport() {
+  const total  = PHASES.length;
+  const done   = PHASES.filter(ph => generated[ph.id]).length;
+  const failed = total - done;
+  const p = document.querySelector('#all-done p');
+  const h = document.querySelector('#all-done h3');
+  if (!total) {
+    h.textContent = 'Report Ready';
+    p.textContent = 'Your lineup board and player roles are ready. Export as a standalone HTML file.';
+  } else if (failed === 0) {
+    h.textContent = 'Report Complete';
+    p.textContent = 'All sections generated. Export as a standalone HTML file.';
+  } else if (done === 0) {
+    h.textContent = 'Export Ready';
+    p.textContent = 'The AI sections couldn\'t be generated (check your API key), but your board and player roles are ready to export.';
+  } else {
+    h.textContent = 'Export Ready';
+    p.textContent = `${done} of ${total} sections generated. You can export now, or retry the failed sections above first.`;
+  }
+  document.getElementById('all-done').style.display = 'block';
 }
 
 document.getElementById('btn-export').addEventListener('click', exportReport);
