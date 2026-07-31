@@ -617,7 +617,9 @@ function exportReport() {
   const kickoff = new Date((data.matchDate || '') + 'T' + (data.kickoffTime || '09:15') + ':00');
 
   const phaseSections = PHASES.map(ph => {
-    const text = generated[ph.id];
+    // Prefer the AI-written prose, but if it wasn't generated (skipped, or the
+    // API errored) fall back to the coach's own notes, exported word-for-word.
+    const text = generated[ph.id] || (data.phases?.[ph.id]?.notes || '').trim();
     if (!text) return '';
     return `
     <section class="report-section">
@@ -969,7 +971,7 @@ function revealExport() {
     p.textContent = 'All sections generated. Export as a standalone HTML file.';
   } else if (done === 0) {
     h.textContent = 'Export Ready';
-    p.textContent = 'The AI sections couldn\'t be generated (check your API key), but your board and player roles are ready to export.';
+    p.textContent = 'No AI rewriting happened — your notes will be exported exactly as you wrote them, along with your tactics board and player roles.';
   } else {
     h.textContent = 'Export Ready';
     p.textContent = `${done} of ${total} sections generated. You can export now, or retry the failed sections above first.`;
