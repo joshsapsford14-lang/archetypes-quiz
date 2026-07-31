@@ -930,6 +930,13 @@ window.addEventListener('message', e => {
       const phId = iframe._pendingPhase;
       phaseBoards[phId] = e.data.data;
       iframe._pendingPhase = null;
+      // Persist the full per-phase board so it survives reloads and can be
+      // exported as an interactive, shareable board.
+      try {
+        const store = JSON.parse(localStorage.getItem('matchday-phase-boards') || '{}');
+        store[phId] = e.data.data;
+        localStorage.setItem('matchday-phase-boards', JSON.stringify(store));
+      } catch(err) {}
 
       const toggleBtn = document.getElementById('tactics-toggle-' + phId);
       const wrap = document.getElementById('tactics-wrap-' + phId);

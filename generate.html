@@ -295,6 +295,8 @@ body {
       <button class="key-btn" id="btn-save-key">Save & Generate</button>
     </div>
     <div class="key-saved" id="key-saved-msg" style="display:none">✓ Key saved</div>
+    <p style="margin-top:18px">Don't need the AI-written sections? You can skip this and export just your interactive tactics board and player notes.</p>
+    <button class="key-btn" id="btn-skip-ai" style="background:transparent;border:1px solid var(--border);color:var(--body)">Skip — export board only →</button>
   </div>
 
   <!-- MATCH HEADER -->
@@ -351,6 +353,7 @@ const PHASES = ALL_PHASES.filter(ph => !_removed.has(ph.id));
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const generated = {}; // phaseId → text
 let generating = false;
+let skipAI = false;   // coach chose to export the board without AI sections
 
 // ─── PROMPT BUILDER ──────────────────────────────────────────────────────────
 function buildPrompt(phase) {
@@ -624,15 +627,37 @@ function exportReport() {
     </section>`;
   }).join('');
 
-  // Tactics board snapshot + individual player notes (the locked first board).
+  // ── INTERACTIVE MULTI-PHASE BOARD ──────────────────────────────────────────
+  // Collect every locked board (main lineup + any per-phase boards like Press /
+  // Buildup) into a data structure the exported file renders as an interactive,
+  // tap-a-player-to-see-notes widget with phase tabs. Fully self-contained.
   let board = null;
   try { board = JSON.parse(localStorage.getItem('matchday-board') || 'null'); } catch(e) {}
+  let phaseStore = {};
+  try { phaseStore = JSON.parse(localStorage.getItem('matchday-phase-boards') || '{}'); } catch(e) {}
+  const removedSet = new Set(data.removedPhases || []);
+
+  const clickable = b => (b && b.homePlayers ? b.homePlayers : []).map(p => ({
+    n: p.n, name: (p.name || '').trim(), pos: (p.pos || '').trim(),
+    notes: (p.notes || '').trim(),
+    fx: typeof p.fx === 'number' ? p.fx : p.pnx,
+    fy: typeof p.fy === 'number' ? p.fy : p.pny,
+  }));
+
+  const PHASE_META = { buildup:'Buildup', press:'Press', 'rest-defence':'Rest Defence', block:'Block' };
+  const BOARDS = [];
+  if (board && board.snapshot) BOARDS.push({ id:'lineup', label:'Lineup', img:board.snapshot, players:clickable(board) });
+  for (const pid of Object.keys(PHASE_META)) {
+    if (removedSet.has(pid)) continue;
+    const pb = phaseStore[pid];
+    if (pb && pb.snapshot) BOARDS.push({ id:pid, label:PHASE_META[pid], img:pb.snapshot, players:clickable(pb) });
+  }
+
   let boardHtml = '';
-  if (board && (board.snapshot || (board.homePlayers && board.homePlayers.length))) {
-    const imgHtml = board.snapshot
-      ? `<div class="board-img"><img src="${board.snapshot}" alt="Starting lineup and formation"></div>`
-      : '';
-    const noteItems = (board.homePlayers || [])
+  const boardDataJson = JSON.stringify(BOARDS).replace(/</g, '\\u003c');
+  if (BOARDS.length) {
+    // Readable role list for the lineup board (scan-friendly companion to the tap UI).
+    const noteItems = (board && board.homePlayers ? board.homePlayers : [])
       .filter(p => (p.name && p.name.trim()) || (p.notes && p.notes.trim()))
       .map(p => `
         <div class="role-item">
@@ -644,10 +669,21 @@ function exportReport() {
         </div>`).join('');
     boardHtml = `
     <section class="report-section">
-      <div class="section-label">LINEUP</div>
-      <h2>Formation & Roles</h2>
-      ${imgHtml}
-      ${noteItems ? `<div class="role-list">${noteItems}</div>` : ''}
+      <div class="section-label">TACTICS BOARD</div>
+      <h2>Interactive Lineup</h2>
+      <p class="board-hint">Tap any player to see their role and notes${BOARDS.length > 1 ? ' — switch phases with the tabs' : ''}.</p>
+      ${BOARDS.length > 1 ? `<div class="phase-tabs" id="phaseTabs"></div>` : ''}
+      <div class="board-stage" id="boardStage"></div>
+      <div class="note-card hidden" id="noteCard">
+        <div class="note-head">
+          <span class="note-num" id="nNum"></span>
+          <span class="note-name" id="nName"></span>
+          <span class="note-pos" id="nPos"></span>
+          <button class="note-close" id="nClose" aria-label="Close">×</button>
+        </div>
+        <div class="note-body" id="nBody"></div>
+      </div>
+      ${noteItems ? `<details class="roles-toggle"><summary>All player roles</summary><div class="role-list">${noteItems}</div></details>` : ''}
     </section>`;
   }
 
@@ -704,6 +740,29 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
 /* TACTICS BOARD + ROLES */
 .board-img{margin:4px 0 18px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
 .board-img img{display:block;width:100%;height:auto}
+.board-hint{font-size:13px;color:var(--muted);margin-bottom:12px}
+.phase-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.phase-tab{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--body);cursor:pointer}
+.phase-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08)}
+.board-stage{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);line-height:0}
+.board-stage img{display:block;width:100%;height:auto}
+.hotspot{position:absolute;transform:translate(-50%,-50%);width:min(11%,58px);aspect-ratio:1;border-radius:50%;background:transparent;border:none;cursor:pointer;padding:0}
+.hotspot::after{content:'';position:absolute;inset:14%;border-radius:50%;border:2px solid transparent;transition:border-color .12s}
+.hotspot.has-note::after{border-color:rgba(240,192,64,.55)}
+.hotspot:active::after,.hotspot.sel::after{border-color:var(--gold)}
+.note-card{margin-top:14px;border:1px solid var(--gold-dim);border-radius:12px;background:var(--card);padding:14px 16px}
+.note-card.hidden{display:none}
+.note-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.note-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;background:var(--gold);color:var(--black);border-radius:5px;padding:2px 8px}
+.note-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.03em;color:var(--white)}
+.note-pos{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.note-close{margin-left:auto;background:transparent;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+.note-body{font-size:15px;line-height:1.65;color:var(--body);font-weight:300;margin-top:10px;white-space:pre-wrap}
+.note-body.empty{color:var(--muted);font-style:italic}
+.roles-toggle{margin-top:18px;border-top:1px solid var(--border);padding-top:12px}
+.roles-toggle summary{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);cursor:pointer;list-style:none}
+.roles-toggle summary::-webkit-details-marker{display:none}
+.roles-toggle[open] summary{margin-bottom:12px}
 .role-list{display:flex;flex-direction:column;gap:2px}
 .role-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .role-item:last-child{border-bottom:none}
@@ -756,6 +815,62 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
   </div>
 </div>
 <script>
+// Interactive tactics board — tap a player to see their notes; tabs switch phase.
+(function(){
+  const BOARDS = ${boardDataJson};
+  const stage = document.getElementById('boardStage');
+  if (!stage || !BOARDS.length) return;
+  const tabsEl = document.getElementById('phaseTabs');
+  const card = document.getElementById('noteCard');
+  const nNum = document.getElementById('nNum'), nName = document.getElementById('nName');
+  const nPos = document.getElementById('nPos'), nBody = document.getElementById('nBody');
+  let active = 0;
+
+  function showNote(pl, btn){
+    nNum.textContent = pl.n != null ? pl.n : '';
+    nName.textContent = pl.name || 'Unnamed';
+    nPos.textContent = pl.pos || '';
+    if (pl.notes){ nBody.textContent = pl.notes; nBody.classList.remove('empty'); }
+    else { nBody.textContent = 'No notes for this player in this phase.'; nBody.classList.add('empty'); }
+    card.classList.remove('hidden');
+    stage.querySelectorAll('.hotspot.sel').forEach(h=>h.classList.remove('sel'));
+    if (btn) btn.classList.add('sel');
+    card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  function renderBoard(i){
+    active = i;
+    const b = BOARDS[i];
+    stage.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = b.img; img.alt = b.label + ' board';
+    stage.appendChild(img);
+    (b.players||[]).forEach(pl => {
+      const btn = document.createElement('button');
+      btn.className = 'hotspot' + (pl.notes ? ' has-note' : '');
+      btn.style.left = (pl.fx*100) + '%';
+      btn.style.top  = (pl.fy*100) + '%';
+      btn.title = pl.name || ('#'+pl.n);
+      btn.addEventListener('click', () => showNote(pl, btn));
+      stage.appendChild(btn);
+    });
+    card.classList.add('hidden');
+    if (tabsEl) tabsEl.querySelectorAll('.phase-tab').forEach((t,ti)=>t.classList.toggle('active', ti===i));
+  }
+
+  if (tabsEl && BOARDS.length > 1){
+    BOARDS.forEach((b,i)=>{
+      const t = document.createElement('button');
+      t.className = 'phase-tab'; t.textContent = b.label;
+      t.addEventListener('click', ()=>renderBoard(i));
+      tabsEl.appendChild(t);
+    });
+  }
+  const closeBtn = document.getElementById('nClose');
+  if (closeBtn) closeBtn.addEventListener('click', ()=>{ card.classList.add('hidden'); stage.querySelectorAll('.hotspot.sel').forEach(h=>h.classList.remove('sel')); });
+  renderBoard(0);
+})();
+
 // Countdown to kickoff
 (function(){
   const kickoff = new Date('${kickoff.toISOString()}');
@@ -802,6 +917,12 @@ async function init() {
     document.getElementById('api-key-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('btn-save-key').click();
     });
+
+    document.getElementById('btn-skip-ai').addEventListener('click', () => {
+      skipAI = true;
+      document.getElementById('api-key-gate').style.display = 'none';
+      start();
+    });
     return;
   }
   start();
@@ -817,15 +938,16 @@ async function start() {
     formData.venue || '',
   ].filter(Boolean).join(' · ');
   document.getElementById('match-header').style.display = 'block';
-  // Board-only report (no tactical phases): nothing to generate, skip progress.
-  document.getElementById('progress-wrap').style.display = PHASES.length ? 'block' : 'none';
+  // No phases, or coach skipped AI: nothing to generate, hide progress.
+  const willGenerate = PHASES.length && !skipAI;
+  document.getElementById('progress-wrap').style.display = willGenerate ? 'block' : 'none';
 
-  buildCards();
-
-  // Generate sections sequentially
-  for (const phase of PHASES) {
-    await generateSection(phase);
-    updateProgress();
+  if (willGenerate) {
+    buildCards();
+    for (const phase of PHASES) {
+      await generateSection(phase);
+      updateProgress();
+    }
   }
 
   revealExport();
@@ -839,7 +961,7 @@ function revealExport() {
   const failed = total - done;
   const p = document.querySelector('#all-done p');
   const h = document.querySelector('#all-done h3');
-  if (!total) {
+  if (skipAI || !total) {
     h.textContent = 'Report Ready';
     p.textContent = 'Your lineup board and player roles are ready. Export as a standalone HTML file.';
   } else if (failed === 0) {

@@ -1536,9 +1536,16 @@ setTimeout(() => {
 // ─── EMBEDDED MODE ────────────────────────────────────────────────────────────
 window.addEventListener('message', e => {
   if (e.data === 'matchday:getState') {
+    // Attach each player's position as a fraction of the snapshot canvas so a
+    // shared/exported board can overlay clickable hotspots on the image.
+    const withXY = arr => arr.map(p => ({
+      ...p,
+      fx: cw ? (pitchLeft + p.pnx * pitchWidth) / cw : p.pnx,
+      fy: ch ? (pitchTop  + p.pny * pitchHeight) / ch : p.pny,
+    }));
     const state = {
-      homePlayers: homePlayers.map(p => ({ ...p })),
-      awayPlayers: awayPlayers.map(p => ({ ...p })),
+      homePlayers: withXY(homePlayers),
+      awayPlayers: withXY(awayPlayers),
       homeArrows:  homeArrows.map(a => ({ ...a })),
       awayArrows:  awayArrows.map(a => ({ ...a })),
       phases: phases.map((ph, i) => ph ? { index: i, ...ph } : null),
