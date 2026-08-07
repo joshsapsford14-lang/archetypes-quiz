@@ -1,0 +1,1575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MatchDay — Tactics Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --black:    #06080C;
+  --card:     #10161F;
+  --border:   #232D3A;
+  --gold:     #F0C040;
+  --gold-dim: #B08820;
+  --white:    #F4F6FA;
+  --body:     #D8DFE8;
+  --green:    #50F090;
+  --red:      #FF5050;
+  --muted:    #4A5568;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--black);
+  color: var(--body);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#app {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 0 40px;
+}
+
+/* HEADER */
+header {
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.wordmark {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: .06em;
+  color: var(--white);
+}
+.wordmark span { color: var(--gold); }
+.header-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* CONTROLS */
+#controls {
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ctrl-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+select {
+  background: var(--black);
+  color: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234A5568'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+.divider { width: 1px; height: 24px; background: var(--border); }
+.mode-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--body);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.mode-btn:hover { border-color: var(--gold-dim); color: var(--white); }
+.mode-btn.active { background: var(--gold); border-color: var(--gold); color: var(--black); font-weight: 600; }
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+  line-height: 1;
+}
+.icon-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* CANVAS */
+#canvas-container {
+  position: relative;
+  width: 100%;
+  background: #0a1a0f;
+  cursor: default;
+}
+#pitch {
+  display: block;
+  width: 100%;
+  touch-action: none;
+}
+
+/* PHASE BAR */
+#phase-bar {
+  padding: 10px 12px;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.phase-slot {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--black);
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.phase-slot:hover { border-color: var(--gold-dim); color: var(--body); }
+.phase-slot.active { border-color: var(--gold); color: var(--gold); background: rgba(240,192,64,.08); }
+.phase-slot.saved::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.phase-slot.active.saved::after { background: var(--gold); }
+.phase-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.ph-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--body);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+}
+.ph-btn:hover { border-color: var(--gold-dim); color: var(--white); }
+.ph-btn.primary { background: var(--gold); border-color: var(--gold); color: var(--black); font-weight: 600; }
+.ph-btn.primary:hover { background: #d4a82e; border-color: #d4a82e; }
+.ph-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* EXPORT BAR */
+#export-bar {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+.export-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.export-btn:hover { border-color: var(--green); color: var(--green); }
+
+/* EDIT MODAL */
+#edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+#edit-modal.hidden { display: none; }
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6,8,12,.85);
+  backdrop-filter: blur(4px);
+}
+.modal-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 320px;
+  z-index: 1;
+}
+.modal-card h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: .06em;
+  color: var(--white);
+  margin-bottom: 18px;
+}
+.modal-card h3 span {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: var(--gold);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.field-row {
+  margin-bottom: 14px;
+}
+.field-row label {
+  display: block;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.field-row input {
+  width: 100%;
+  background: var(--black);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+}
+.field-row input:focus { border-color: var(--gold); }
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+.modal-actions button {
+  flex: 1;
+  padding: 9px;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: all .15s;
+}
+#edit-save { background: var(--gold); border-color: var(--gold); color: var(--black); }
+#edit-save:hover { background: #d4a82e; }
+#edit-cancel { background: transparent; color: var(--body); }
+#edit-cancel:hover { border-color: var(--red); color: var(--red); }
+#edit-remove { background: transparent; border-color: var(--red); color: var(--red); margin-top: 8px; width: 100%; padding: 7px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--red); transition: all .15s; }
+#edit-remove:hover { background: rgba(255,80,80,.12); }
+
+/* ANIMATE PROGRESS */
+#anim-bar {
+  height: 2px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+#anim-progress {
+  height: 100%;
+  background: var(--gold);
+  width: 0%;
+  transition: none;
+}
+
+/* INFO CARD (tap a player to view their role) */
+#info-card {
+  position: absolute;
+  z-index: 60;
+  width: 220px;
+  background: var(--card);
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.55);
+}
+#info-card.hidden { display: none; }
+.info-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.info-num {
+  font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500;
+  background: var(--gold); color: var(--black); border-radius: 5px; padding: 2px 7px;
+}
+.info-name { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: .04em; color: var(--white); }
+.info-pos {
+  font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); margin-left: auto;
+}
+.info-notes {
+  font-size: 13px; line-height: 1.5; color: var(--body); white-space: pre-wrap;
+  border-top: 1px solid var(--border); padding-top: 8px; min-height: 18px;
+}
+.info-notes.empty { color: var(--muted); font-style: italic; }
+.info-actions { display: flex; gap: 6px; margin-top: 10px; }
+.info-actions button {
+  flex: 1; padding: 6px; border-radius: 6px; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+  background: transparent; color: var(--body); transition: all .15s;
+}
+#info-edit { background: var(--gold); border-color: var(--gold); color: var(--black); }
+#info-edit:hover { background: #d4a82e; }
+#info-close:hover { border-color: var(--gold-dim); color: var(--white); }
+
+/* HINT */
+#hint {
+  padding: 6px 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  min-height: 26px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="wordmark">Match<span>Day</span></div>
+    <div class="header-label">Tactics Board</div>
+  </header>
+
+  <div id="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Home</span>
+      <select id="home-formation"></select>
+    </div>
+    <div class="divider"></div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Away</span>
+      <select id="away-formation"></select>
+    </div>
+    <div class="divider"></div>
+    <div class="ctrl-group">
+      <button class="mode-btn active" data-mode="drag" id="btn-drag">Move</button>
+      <button class="mode-btn" data-mode="draw-home" id="btn-draw-home">Arrow (Home)</button>
+      <button class="mode-btn" data-mode="draw-away" id="btn-draw-away">Arrow (Away)</button>
+    </div>
+    <div class="divider"></div>
+    <button class="icon-btn" id="btn-add-home" title="Add home player" style="color:var(--body);border-color:var(--border)">+ Home</button>
+    <button class="icon-btn" id="btn-add-away" title="Add away player" style="color:var(--body);border-color:var(--border)">+ Away</button>
+    <div class="divider"></div>
+    <button class="icon-btn" id="btn-clear-arrows" title="Clear arrows">✕ Arrows</button>
+  </div>
+
+  <div id="canvas-container">
+    <canvas id="pitch"></canvas>
+  </div>
+
+  <div id="anim-bar"><div id="anim-progress"></div></div>
+  <div id="hint">Double-tap a player to edit · Drag to move · Use arrow modes to draw movement lines</div>
+
+  <div id="phase-bar">
+    <div id="phase-slots"></div>
+    <div class="phase-actions">
+      <button class="ph-btn" id="btn-save-phase">Save Phase</button>
+      <button class="ph-btn" id="btn-animate" disabled>▶ Animate</button>
+    </div>
+  </div>
+
+  <div id="export-bar">
+    <button class="export-btn" id="btn-export">Export JSON</button>
+  </div>
+</div>
+
+<div id="edit-modal" class="hidden">
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal-card">
+    <h3>Edit Player <span id="edit-team-label"></span></h3>
+    <div class="field-row">
+      <label>Number</label>
+      <input id="edit-number" type="number" min="1" max="99">
+    </div>
+    <div class="field-row">
+      <label>Name</label>
+      <input id="edit-name" type="text" placeholder="Player name">
+    </div>
+    <div class="field-row">
+      <label>Position</label>
+      <input id="edit-pos" type="text" placeholder="e.g. ST, CB, GK">
+    </div>
+    <div class="field-row">
+      <label>Notes for this phase</label>
+      <textarea id="edit-notes" placeholder="e.g. Show inside, drop to receive between the lines" rows="3"
+        style="width:100%;background:var(--black);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--white);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;resize:vertical"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button id="edit-save">Save</button>
+      <button id="edit-cancel">Cancel</button>
+    </div>
+    <button id="edit-remove">Remove player</button>
+  </div>
+</div>
+
+<div id="info-card" class="hidden">
+  <div class="info-head">
+    <span class="info-num" id="info-num"></span>
+    <span class="info-name" id="info-name"></span>
+    <span class="info-pos" id="info-pos"></span>
+  </div>
+  <div class="info-notes" id="info-notes"></div>
+  <div class="info-actions">
+    <button id="info-edit">Edit</button>
+    <button id="info-close">Close</button>
+  </div>
+</div>
+
+<script>
+// ─── SAFARI POLYFILL ─────────────────────────────────────────────────────────
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = [r, r, r, r];
+    else if (Array.isArray(r) && r.length === 1) r = [r[0], r[0], r[0], r[0]];
+    const [tl = 0, tr = 0, br = 0, bl = 0] = r;
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y);
+    this.arcTo(x + w, y, x + w, y + tr, tr);
+    this.lineTo(x + w, y + h - br);
+    this.arcTo(x + w, y + h, x + w - br, y + h, br);
+    this.lineTo(x + bl, y + h);
+    this.arcTo(x, y + h, x, y + h - bl, bl);
+    this.lineTo(x, y + tl);
+    this.arcTo(x, y, x + tl, y, tl);
+    this.closePath();
+  };
+}
+
+// ─── FORMATION DATA ───────────────────────────────────────────────────────────
+// nx: 0 (left) → 1 (right)
+// ny: 0 (own goal line) → 1 (halfway line)
+// Positions are EXPLICIT — never approximated.
+const FORMATIONS = {
+  '4-3-3': [
+    { n:1,  pos:'GK', nx:0.500, ny:0.040 },
+    { n:2,  pos:'RB', nx:0.800, ny:0.210 },
+    { n:5,  pos:'CB', nx:0.617, ny:0.210 },
+    { n:4,  pos:'CB', nx:0.383, ny:0.210 },
+    { n:3,  pos:'LB', nx:0.200, ny:0.210 },
+    { n:6,  pos:'CM', nx:0.750, ny:0.470 },
+    { n:8,  pos:'CM', nx:0.500, ny:0.490 },
+    { n:11, pos:'CM', nx:0.250, ny:0.470 },
+    { n:7,  pos:'RW', nx:0.800, ny:0.760 },
+    { n:9,  pos:'ST', nx:0.500, ny:0.820 },
+    { n:10, pos:'LW', nx:0.200, ny:0.760 },
+  ],
+  '4-2-3-1': [
+    { n:1,  pos:'GK', nx:0.500, ny:0.040 },
+    { n:2,  pos:'RB', nx:0.800, ny:0.200 },
+    { n:5,  pos:'CB', nx:0.617, ny:0.200 },
+    { n:4,  pos:'CB', nx:0.383, ny:0.200 },
+    { n:3,  pos:'LB', nx:0.200, ny:0.200 },
+    { n:6,  pos:'DM', nx:0.617, ny:0.400 },
+    { n:8,  pos:'DM', nx:0.383, ny:0.400 },
+    { n:7,  pos:'AM', nx:0.800, ny:0.620 },
+    { n:10, pos:'AM', nx:0.500, ny:0.640 },
+    { n:11, pos:'AM', nx:0.200, ny:0.620 },
+    { n:9,  pos:'ST', nx:0.500, ny:0.830 },
+  ],
+  '3-4-2-1': [
+    { n:1,  pos:'GK', nx:0.500, ny:0.040 },
+    { n:4,  pos:'CB', nx:0.250, ny:0.220 },
+    { n:5,  pos:'CB', nx:0.500, ny:0.220 },
+    { n:6,  pos:'CB', nx:0.750, ny:0.220 },
+    { n:2,  pos:'RM', nx:0.875, ny:0.440 },
+    { n:8,  pos:'CM', nx:0.617, ny:0.420 },
+    { n:11, pos:'CM', nx:0.383, ny:0.420 },
+    { n:3,  pos:'LM', nx:0.125, ny:0.440 },
+    { n:7,  pos:'SS', nx:0.650, ny:0.670 },
+    { n:10, pos:'SS', nx:0.350, ny:0.670 },
+    { n:9,  pos:'ST', nx:0.500, ny:0.830 },
+  ],
+  '4-4-2': [
+    { n:1,  pos:'GK', nx:0.500, ny:0.040 },
+    { n:2,  pos:'RB', nx:0.800, ny:0.210 },
+    { n:5,  pos:'CB', nx:0.617, ny:0.210 },
+    { n:4,  pos:'CB', nx:0.383, ny:0.210 },
+    { n:3,  pos:'LB', nx:0.200, ny:0.210 },
+    { n:7,  pos:'RM', nx:0.850, ny:0.470 },
+    { n:8,  pos:'CM', nx:0.617, ny:0.460 },
+    { n:6,  pos:'CM', nx:0.383, ny:0.460 },
+    { n:11, pos:'LM', nx:0.150, ny:0.470 },
+    { n:9,  pos:'ST', nx:0.617, ny:0.790 },
+    { n:10, pos:'ST', nx:0.383, ny:0.790 },
+  ],
+  // 9-a-side formations
+  '3-2-3': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:4, pos:'CB', nx:0.250, ny:0.250 },
+    { n:5, pos:'CB', nx:0.500, ny:0.235 },
+    { n:6, pos:'CB', nx:0.750, ny:0.250 },
+    { n:8, pos:'CM', nx:0.617, ny:0.500 },
+    { n:6, pos:'CM', nx:0.383, ny:0.500 },
+    { n:7, pos:'RW', nx:0.800, ny:0.780 },
+    { n:9, pos:'ST', nx:0.500, ny:0.830 },
+    { n:11,pos:'LW', nx:0.200, ny:0.780 },
+  ],
+  '2-1-5': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:4, pos:'CB', nx:0.617, ny:0.250 },
+    { n:5, pos:'CB', nx:0.383, ny:0.250 },
+    { n:6, pos:'CM', nx:0.500, ny:0.470 },
+    { n:7, pos:'RW', nx:0.875, ny:0.720 },
+    { n:8, pos:'RF', nx:0.650, ny:0.780 },
+    { n:9, pos:'ST', nx:0.500, ny:0.820 },
+    { n:10,pos:'LF', nx:0.350, ny:0.780 },
+    { n:11,pos:'LW', nx:0.125, ny:0.720 },
+  ],
+  '4-2-2': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:2, pos:'RB', nx:0.800, ny:0.210 },
+    { n:5, pos:'CB', nx:0.617, ny:0.210 },
+    { n:4, pos:'CB', nx:0.383, ny:0.210 },
+    { n:3, pos:'LB', nx:0.200, ny:0.210 },
+    { n:8, pos:'CM', nx:0.617, ny:0.510 },
+    { n:6, pos:'CM', nx:0.383, ny:0.510 },
+    { n:7, pos:'ST', nx:0.650, ny:0.790 },
+    { n:9, pos:'ST', nx:0.350, ny:0.790 },
+  ],
+  '3-3-2': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:4, pos:'CB', nx:0.250, ny:0.235 },
+    { n:5, pos:'CB', nx:0.500, ny:0.220 },
+    { n:6, pos:'CB', nx:0.750, ny:0.235 },
+    { n:7, pos:'RM', nx:0.800, ny:0.490 },
+    { n:8, pos:'CM', nx:0.500, ny:0.480 },
+    { n:11,pos:'LM', nx:0.200, ny:0.490 },
+    { n:9, pos:'ST', nx:0.617, ny:0.790 },
+    { n:10,pos:'ST', nx:0.383, ny:0.790 },
+  ],
+  '2-3-1': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:2, pos:'CB', nx:0.617, ny:0.250 },
+    { n:3, pos:'CB', nx:0.383, ny:0.250 },
+    { n:4, pos:'RM', nx:0.800, ny:0.510 },
+    { n:5, pos:'CM', nx:0.500, ny:0.490 },
+    { n:6, pos:'LM', nx:0.200, ny:0.510 },
+    { n:7, pos:'ST', nx:0.500, ny:0.830 },
+  ],
+  '3-2-1': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:2, pos:'CB', nx:0.250, ny:0.235 },
+    { n:3, pos:'CB', nx:0.500, ny:0.220 },
+    { n:4, pos:'CB', nx:0.750, ny:0.235 },
+    { n:5, pos:'CM', nx:0.617, ny:0.510 },
+    { n:6, pos:'CM', nx:0.383, ny:0.510 },
+    { n:7, pos:'ST', nx:0.500, ny:0.830 },
+  ],
+  '2-2-2': [
+    { n:1, pos:'GK', nx:0.500, ny:0.045 },
+    { n:2, pos:'CB', nx:0.617, ny:0.250 },
+    { n:3, pos:'CB', nx:0.383, ny:0.250 },
+    { n:4, pos:'CM', nx:0.617, ny:0.510 },
+    { n:5, pos:'CM', nx:0.383, ny:0.510 },
+    { n:6, pos:'ST', nx:0.617, ny:0.790 },
+    { n:7, pos:'ST', nx:0.383, ny:0.790 },
+  ],
+};
+
+const FORMATION_NAMES = Object.keys(FORMATIONS);
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let canvas, ctx, cw, ch;
+
+// Pitch geometry (CSS pixels)
+let pitchLeft, pitchRight, pitchTop, pitchBottom;
+let pitchWidth, pitchHeight, halfHeight, pxPerMeter;
+
+const PITCH_PAD_X = 18;
+const PITCH_PAD_Y = 22;
+const PITCH_RATIO = 105 / 68; // real-world aspect ratio
+const PLAYER_R = 17; // player marker radius (CSS px)
+
+// Players stored with full-pitch normalized coords:
+// pnx: 0-1 left→right, pny: 0-1 top→bottom (away at top, home at bottom)
+let homePlayers = [];
+let awayPlayers = [];
+let homeArrows  = [];
+let awayArrows  = [];
+
+// Current interaction mode
+let mode = 'drag'; // 'drag' | 'draw-home' | 'draw-away'
+
+// Drag state
+let dragging = null; // { player, startX, startY, moved }
+
+// Draw state
+let drawing = null; // { x1, y1 } in CSS canvas coords
+
+// Edit modal state
+let editTarget = null;
+
+// Phase snapshots (5 slots)
+const NUM_PHASES = 5;
+let phases = Array(NUM_PHASES).fill(null);
+let currentPhaseIdx = 0;
+
+// Animation
+let animFrame = null;
+let animating  = false;
+
+// ─── COORDINATE HELPERS ───────────────────────────────────────────────────────
+function computePitchGeometry() {
+  pitchLeft   = PITCH_PAD_X;
+  pitchRight  = cw - PITCH_PAD_X;
+  pitchTop    = PITCH_PAD_Y;
+  pitchBottom = ch - PITCH_PAD_Y;
+  pitchWidth  = pitchRight  - pitchLeft;
+  pitchHeight = pitchBottom - pitchTop;
+  halfHeight  = pitchHeight / 2;
+  pxPerMeter  = pitchWidth / 68;
+}
+
+// Convert full-pitch normalized → canvas CSS px
+function normToCanvas(pnx, pny) {
+  return {
+    x: pitchLeft + pnx * pitchWidth,
+    y: pitchTop  + pny * pitchHeight,
+  };
+}
+
+// Canvas CSS px → full-pitch normalized (clamped)
+function canvasToNorm(cx, cy) {
+  return {
+    pnx: Math.max(0.02, Math.min(0.98, (cx - pitchLeft) / pitchWidth)),
+    pny: Math.max(0.02, Math.min(0.98, (cy - pitchTop)  / pitchHeight)),
+  };
+}
+
+// Formation unit position → full-pitch normalized
+function formToFullNorm(fnx, fny, team) {
+  if (team === 'home') {
+    // Home at bottom: fny=0 → pny=1 (bottom), fny=1 → pny=0.5 (halfway)
+    return { pnx: fnx, pny: 1 - fny * 0.5 };
+  } else {
+    // Away at top, x-mirrored: fny=0 → pny=0, fny=1 → pny=0.5
+    return { pnx: 1 - fnx, pny: fny * 0.5 };
+  }
+}
+
+// ─── PLAYER CREATION ─────────────────────────────────────────────────────────
+let _uid = 1;
+function makePlayer(slot, team) {
+  const pos = formToFullNorm(slot.nx, slot.ny, team);
+  return {
+    id:    _uid++,
+    team,
+    n:     slot.n,
+    name:  '',
+    pos:   slot.pos,
+    notes: '',
+    pnx:   pos.pnx,
+    pny:   pos.pny,
+  };
+}
+
+function applyFormation(formName, team) {
+  const slots = FORMATIONS[formName];
+  if (!slots) return;
+  // Assign sequential numbers to avoid duplicates within a team
+  const players = slots.map((slot, i) => {
+    const p = makePlayer(slot, team);
+    p.n = i + 1; // 1-indexed sequential within team
+    p.pos = slot.pos;
+    return p;
+  });
+  // Give GK number 1, rest sequential
+  players[0].n = 1;
+  for (let i = 1; i < players.length; i++) players[i].n = i + 1;
+
+  if (team === 'home') homePlayers = players;
+  else                 awayPlayers = players;
+}
+
+// ─── HIT TESTING ─────────────────────────────────────────────────────────────
+function hitPlayer(cx, cy) {
+  const all = [...homePlayers, ...awayPlayers];
+  for (let i = all.length - 1; i >= 0; i--) {
+    const p = all[i];
+    const { x, y } = normToCanvas(p.pnx, p.pny);
+    const dx = cx - x, dy = cy - y;
+    if (dx * dx + dy * dy <= (PLAYER_R + 4) * (PLAYER_R + 4)) return p;
+  }
+  return null;
+}
+
+// ─── PITCH DRAWING ────────────────────────────────────────────────────────────
+function drawPitch() {
+  const pl = pitchLeft, pr = pitchRight, pt = pitchTop, pb = pitchBottom;
+  const pw = pitchWidth, ph = pitchHeight;
+  const m  = pxPerMeter;
+
+  // Pitch surface — alternating stripe pattern
+  const stripeCount = 10;
+  const stripeW = pw / stripeCount;
+  ctx.fillStyle = '#1a3d22';
+  ctx.fillRect(pl, pt, pw, ph);
+  for (let i = 0; i < stripeCount; i += 2) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)';
+    ctx.fillRect(pl + i * stripeW, pt, stripeW, ph);
+  }
+
+  // Lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+
+  // Boundary
+  ctx.strokeRect(pl, pt, pw, ph);
+
+  // Halfway line
+  const hy = pt + halfHeight;
+  ctx.beginPath(); ctx.moveTo(pl, hy); ctx.lineTo(pr, hy); ctx.stroke();
+
+  // Centre circle
+  const ccR = 9.15 * m;
+  ctx.beginPath(); ctx.arc(pl + pw / 2, hy, ccR, 0, Math.PI * 2); ctx.stroke();
+
+  // Centre spot
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.beginPath(); ctx.arc(pl + pw / 2, hy, 2.5, 0, Math.PI * 2); ctx.fill();
+
+  // Penalty areas & goal areas
+  for (const side of ['top', 'bottom']) {
+    const baseY = side === 'top' ? pt : pb;
+    const dir   = side === 'top' ? 1 : -1;
+
+    // Penalty area: 40.32m wide, 16.5m deep
+    const paW = 40.32 * m, paD = 16.5 * m;
+    const paX = pl + (pw - paW) / 2;
+    ctx.strokeRect(paX, baseY, paW, paD * dir);
+
+    // Goal area (6-yard box): 18.32m wide, 5.5m deep
+    const gaW = 18.32 * m, gaD = 5.5 * m;
+    const gaX = pl + (pw - gaW) / 2;
+    ctx.strokeRect(gaX, baseY, gaW, gaD * dir);
+
+    // Penalty spot
+    const spotY = baseY + 11 * m * dir;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath(); ctx.arc(pl + pw / 2, spotY, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // Penalty arc (D): radius 9.15m from penalty spot
+    const arcStartAngle = side === 'top'
+      ? Math.PI * 0.18 : -Math.PI * 1.18;
+    const arcEndAngle = side === 'top'
+      ? Math.PI * 0.82 : -Math.PI * 0.18;
+    ctx.beginPath();
+    ctx.arc(pl + pw / 2, spotY, 9.15 * m, arcStartAngle, arcEndAngle);
+    ctx.stroke();
+  }
+
+  // Corner arcs
+  const cr = 1 * m;
+  const corners = [
+    { x: pl, y: pt,  as: 0,            ae: Math.PI / 2 },
+    { x: pr, y: pt,  as: Math.PI / 2,  ae: Math.PI },
+    { x: pr, y: pb,  as: Math.PI,      ae: Math.PI * 1.5 },
+    { x: pl, y: pb,  as: Math.PI * 1.5, ae: Math.PI * 2 },
+  ];
+  for (const c of corners) {
+    ctx.beginPath(); ctx.arc(c.x, c.y, cr, c.as, c.ae); ctx.stroke();
+  }
+}
+
+// ─── ARROW DRAWING ────────────────────────────────────────────────────────────
+function drawArrow(x1, y1, x2, y2, color, alpha = 1) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 8) return;
+
+  // Control point: perpendicular offset at 20% of length
+  const curvature = Math.min(len * 0.22, 40);
+  const mx = (x1 + x2) / 2;
+  const my = (y1 + y2) / 2;
+  const nx = -dy / len;
+  const ny =  dx / len;
+  const cx = mx + nx * curvature;
+  const cy = my + ny * curvature;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.fillStyle   = color;
+  ctx.lineWidth   = 2.2;
+  ctx.lineCap     = 'round';
+
+  // Bezier path (stop slightly short for arrowhead)
+  const t = 0.88; // point along bezier for body end
+  const bx = (1-t)*(1-t)*x1 + 2*(1-t)*t*cx + t*t*x2;
+  const by = (1-t)*(1-t)*y1 + 2*(1-t)*t*cy + t*t*y2;
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.quadraticCurveTo(cx, cy, bx, by);
+  ctx.stroke();
+
+  // Arrowhead: direction = tangent at t=1
+  const tx = 2 * (1 - 1) * (cx - x1) + 2 * 1 * (x2 - cx); // unused, use end tangent
+  const angle = Math.atan2(y2 - cy, x2 - cx);
+  const hs = 9, hw = 5;
+
+  ctx.beginPath();
+  ctx.translate(x2, y2);
+  ctx.rotate(angle);
+  ctx.moveTo(0, 0);
+  ctx.lineTo(-hs, -hw);
+  ctx.lineTo(-hs, hw);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawAllArrows(arrows, color, alpha) {
+  for (const a of arrows) {
+    const p1 = normToCanvas(a.x1, a.y1);
+    const p2 = normToCanvas(a.x2, a.y2);
+    drawArrow(p1.x, p1.y, p2.x, p2.y, color, alpha);
+  }
+}
+
+// ─── PLAYER DRAWING ───────────────────────────────────────────────────────────
+function drawPlayer(p, alpha = 1) {
+  const { x, y } = normToCanvas(p.pnx, p.pny);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  if (p.team === 'home') {
+    // White radial gradient, dark blue stroke
+    const grad = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, PLAYER_R);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#c8d8f0');
+    ctx.fillStyle   = grad;
+    ctx.strokeStyle = '#2850A0';
+    ctx.lineWidth   = 2.2;
+
+    ctx.beginPath();
+    ctx.arc(x, y, PLAYER_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Number
+    ctx.fillStyle   = '#1a3060';
+    ctx.font        = `bold ${PLAYER_R < 14 ? 10 : 12}px 'DM Sans', sans-serif`;
+    ctx.textAlign   = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.n, x, y + 0.5);
+
+    // Name tag
+    if (p.name) {
+      drawNameTag(x, y, p.name, 'rgba(20,30,50,0.85)', '#b8d0f0');
+    } else {
+      drawNameTag(x, y, p.pos, 'rgba(20,30,50,0.75)', '#6888b0');
+    }
+  } else {
+    // Dark navy gradient, lighter blue stroke
+    const grad = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, PLAYER_R);
+    grad.addColorStop(0, '#2E4070');
+    grad.addColorStop(1, '#1a2d52');
+    ctx.fillStyle   = grad;
+    ctx.strokeStyle = '#5080C0';
+    ctx.lineWidth   = 2.2;
+
+    ctx.beginPath();
+    ctx.arc(x, y, PLAYER_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle    = '#e0ecff';
+    ctx.font         = `bold ${PLAYER_R < 14 ? 10 : 12}px 'DM Sans', sans-serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.n, x, y + 0.5);
+
+    if (p.name) {
+      drawNameTag(x, y, p.name, 'rgba(20,30,60,0.85)', '#90b8e8');
+    } else {
+      drawNameTag(x, y, p.pos, 'rgba(20,30,60,0.75)', '#5878a0');
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawNameTag(cx, cy, text, bg, fg) {
+  const tagY = cy + PLAYER_R + 5;
+  ctx.font = "10px 'DM Mono', monospace";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(text).width;
+  const pw = tw + 8, ph = 13, pr = 4;
+
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.roundRect(cx - pw / 2, tagY - ph / 2, pw, ph, pr);
+  ctx.fill();
+
+  ctx.fillStyle = fg;
+  ctx.fillText(text, cx, tagY + 0.5);
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render(overridePlayers) {
+  if (!ctx) return;
+  const dpr = window.devicePixelRatio || 1;
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.clearRect(0, 0, cw, ch);
+  drawPitch();
+
+  const hp = overridePlayers ? overridePlayers.home : homePlayers;
+  const ap = overridePlayers ? overridePlayers.away : awayPlayers;
+  const ha = overridePlayers ? overridePlayers.homeArrows : homeArrows;
+  const aa = overridePlayers ? overridePlayers.awayArrows : awayArrows;
+
+  const arrowAlpha = overridePlayers ? overridePlayers.arrowAlpha : 1;
+
+  drawAllArrows(ha, '#F0C040', arrowAlpha);
+  drawAllArrows(aa, '#FF5050', arrowAlpha);
+
+  if (drawing) {
+    const color = mode === 'draw-home' ? '#F0C040' : '#FF5050';
+    drawArrow(drawing.x1, drawing.y1, drawing.cx, drawing.cy, color, 0.6);
+  }
+
+  for (const p of ap) drawPlayer(p, overridePlayers ? overridePlayers.playerAlpha : 1);
+  for (const p of hp) drawPlayer(p, overridePlayers ? overridePlayers.playerAlpha : 1);
+
+  ctx.restore();
+}
+
+// ─── EASE ─────────────────────────────────────────────────────────────────────
+function ease(t) {
+  return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+// ─── PHASE SYSTEM ─────────────────────────────────────────────────────────────
+function captureState() {
+  return {
+    homePlayers: homePlayers.map(p => ({ ...p })),
+    awayPlayers: awayPlayers.map(p => ({ ...p })),
+    homeArrows:  homeArrows.map(a => ({ ...a })),
+    awayArrows:  awayArrows.map(a => ({ ...a })),
+  };
+}
+
+function restoreState(snapshot) {
+  homePlayers = snapshot.homePlayers.map(p => ({ ...p }));
+  awayPlayers = snapshot.awayPlayers.map(p => ({ ...p }));
+  homeArrows  = snapshot.homeArrows.map(a => ({ ...a }));
+  awayArrows  = snapshot.awayArrows.map(a => ({ ...a }));
+}
+
+// Clone an entire locked board (both teams, formations, arrows, names, notes,
+// exact positions) so a per-phase board opens identical to the first section.
+function applyFullBoard(data) {
+  if (!data) return;
+  if (Array.isArray(data.homePlayers)) homePlayers = data.homePlayers.map(p => ({ ...p, id: _uid++ }));
+  if (Array.isArray(data.awayPlayers)) awayPlayers = data.awayPlayers.map(p => ({ ...p, id: _uid++ }));
+  if (Array.isArray(data.homeArrows))  homeArrows  = data.homeArrows.map(a => ({ ...a, id: _uid++ }));
+  if (Array.isArray(data.awayArrows))  awayArrows  = data.awayArrows.map(a => ({ ...a, id: _uid++ }));
+  // Reflect the locked formations in the dropdowns (add the option if the
+  // current format filter wouldn't otherwise include it).
+  for (const [id, val] of [['home-formation', data.homeFormation], ['away-formation', data.awayFormation]]) {
+    if (!val) continue;
+    const sel = document.getElementById(id);
+    if (sel && !Array.from(sel.options).some(o => o.value === val)) {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = val;
+      sel.appendChild(opt);
+    }
+    if (sel) sel.value = val;
+  }
+}
+
+function savePhase() {
+  phases[currentPhaseIdx] = captureState();
+  updatePhaseUI();
+  updateHint('Phase ' + (currentPhaseIdx + 1) + ' saved.');
+}
+
+function loadPhase(idx) {
+  if (animating) return;
+  currentPhaseIdx = idx;
+  if (phases[idx]) restoreState(phases[idx]);
+  updatePhaseUI();
+  render();
+}
+
+function updatePhaseUI() {
+  const slots = document.querySelectorAll('.phase-slot');
+  slots.forEach((el, i) => {
+    el.classList.toggle('active', i === currentPhaseIdx);
+    el.classList.toggle('saved', phases[i] !== null);
+  });
+  const savedCount = phases.filter(Boolean).length;
+  document.getElementById('btn-animate').disabled = savedCount < 2;
+}
+
+function buildPhaseSlots() {
+  const container = document.getElementById('phase-slots');
+  container.innerHTML = '';
+  for (let i = 0; i < NUM_PHASES; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'phase-slot' + (i === 0 ? ' active' : '');
+    btn.dataset.phase = i;
+    btn.textContent = i + 1;
+    btn.title = 'Phase ' + (i + 1);
+    btn.addEventListener('click', () => loadPhase(i));
+    container.appendChild(btn);
+  }
+}
+
+// ─── ANIMATION ────────────────────────────────────────────────────────────────
+function lerpPlayer(a, b, t) {
+  return { ...a, pnx: a.pnx + (b.pnx - a.pnx) * t, pny: a.pny + (b.pny - a.pny) * t };
+}
+
+function animatePhases() {
+  if (animating) return;
+  const saved = phases.map((p, i) => p ? i : null).filter(i => i !== null);
+  if (saved.length < 2) return;
+
+  animating = true;
+  document.getElementById('btn-animate').textContent = '■ Stop';
+  document.getElementById('btn-animate').onclick = stopAnimation;
+
+  let stepIdx = 0;
+  const STEP_DURATION = 1200; // ms per transition
+  const HOLD_DURATION = 600;  // ms to hold at each phase
+
+  function runStep() {
+    if (!animating || stepIdx >= saved.length - 1) {
+      stopAnimation();
+      return;
+    }
+
+    const fromIdx = saved[stepIdx];
+    const toIdx   = saved[stepIdx + 1];
+    const fromSnap = phases[fromIdx];
+    const toSnap   = phases[toIdx];
+
+    const startTime = performance.now();
+
+    function frame(now) {
+      if (!animating) return;
+      const elapsed = now - startTime;
+      const raw = Math.min(elapsed / STEP_DURATION, 1);
+      const t   = ease(raw);
+
+      // Interpolate players by matching IDs
+      const interpHome = fromSnap.homePlayers.map(fp => {
+        const tp = toSnap.homePlayers.find(x => x.id === fp.id);
+        return tp ? lerpPlayer(fp, tp, t) : fp;
+      });
+      const interpAway = fromSnap.awayPlayers.map(fp => {
+        const tp = toSnap.awayPlayers.find(x => x.id === fp.id);
+        return tp ? lerpPlayer(fp, tp, t) : fp;
+      });
+
+      // Fade arrows: fade out at 0.4, fade in at 0.6
+      let arrowAlpha;
+      if (raw < 0.4)      arrowAlpha = 1 - raw / 0.4;
+      else if (raw < 0.6) arrowAlpha = 0;
+      else                arrowAlpha = (raw - 0.6) / 0.4;
+
+      const arrowSrc = arrowAlpha >= 0.5 ? toSnap : fromSnap;
+
+      render({
+        home: interpHome,
+        away: interpAway,
+        homeArrows: arrowSrc.homeArrows,
+        awayArrows: arrowSrc.awayArrows,
+        arrowAlpha,
+        playerAlpha: 1,
+      });
+
+      // Update progress bar
+      const totalSteps = saved.length - 1;
+      const pct = ((stepIdx + raw) / totalSteps) * 100;
+      document.getElementById('anim-progress').style.width = pct + '%';
+      document.getElementById('anim-progress').style.transition = 'none';
+
+      if (raw < 1) {
+        animFrame = requestAnimationFrame(frame);
+      } else {
+        // Hold at the to-phase, then move on
+        stepIdx++;
+        currentPhaseIdx = toIdx;
+        updatePhaseUI();
+        setTimeout(runStep, HOLD_DURATION);
+      }
+    }
+
+    animFrame = requestAnimationFrame(frame);
+  }
+
+  runStep();
+}
+
+function stopAnimation() {
+  animating = false;
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+  document.getElementById('btn-animate').textContent = '▶ Animate';
+  document.getElementById('btn-animate').onclick = animatePhases;
+  document.getElementById('anim-progress').style.width = '0%';
+  if (phases[currentPhaseIdx]) restoreState(phases[currentPhaseIdx]);
+  render();
+}
+
+// ─── EDIT MODAL ───────────────────────────────────────────────────────────────
+function openEditModal(player) {
+  closeInfoCard();
+  editTarget = player;
+  document.getElementById('edit-team-label').textContent =
+    player.team === 'home' ? 'HOME' : 'AWAY';
+  document.getElementById('edit-number').value = player.n;
+  document.getElementById('edit-name').value   = player.name || '';
+  document.getElementById('edit-pos').value    = player.pos  || '';
+  document.getElementById('edit-notes').value  = player.notes || '';
+  document.getElementById('edit-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('edit-name').focus(), 50);
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.add('hidden');
+  editTarget = null;
+}
+
+function saveEdit() {
+  if (!editTarget) return;
+  editTarget.n    = parseInt(document.getElementById('edit-number').value) || editTarget.n;
+  editTarget.name = document.getElementById('edit-name').value.trim();
+  editTarget.pos  = document.getElementById('edit-pos').value.trim();
+  editTarget.notes = document.getElementById('edit-notes').value.trim();
+  closeEditModal();
+  render();
+}
+
+// ─── INFO CARD (tap a player to see their role & notes) ────────────────────────
+let infoTarget = null;
+function showInfoCard(player) {
+  infoTarget = player;
+  document.getElementById('info-num').textContent  = player.n;
+  document.getElementById('info-name').textContent = player.name || 'Unnamed';
+  document.getElementById('info-pos').textContent  = player.pos || '';
+  const notesEl = document.getElementById('info-notes');
+  if (player.notes) {
+    notesEl.textContent = player.notes;
+    notesEl.classList.remove('empty');
+  } else {
+    notesEl.textContent = 'No notes yet — tap Edit to add instructions.';
+    notesEl.classList.add('empty');
+  }
+  const card = document.getElementById('info-card');
+  card.classList.remove('hidden');
+  // Position near the player, kept within the canvas container.
+  const { x, y } = normToCanvas(player.pnx, player.pny);
+  const cont = document.getElementById('canvas-container');
+  const cardW = 220, cardH = card.offsetHeight || 130;
+  let left = x + 24, top = y - cardH / 2;
+  if (left + cardW > cont.clientWidth - 8) left = x - cardW - 24;
+  left = Math.max(8, Math.min(left, cont.clientWidth - cardW - 8));
+  top  = Math.max(8, Math.min(top, cont.clientHeight - cardH - 8));
+  card.style.left = left + 'px';
+  card.style.top  = top + 'px';
+}
+function closeInfoCard() {
+  document.getElementById('info-card').classList.add('hidden');
+  infoTarget = null;
+}
+
+function removePlayer() {
+  if (!editTarget) return;
+  if (editTarget.team === 'home') {
+    homePlayers = homePlayers.filter(p => p.id !== editTarget.id);
+  } else {
+    awayPlayers = awayPlayers.filter(p => p.id !== editTarget.id);
+  }
+  closeEditModal();
+  render();
+}
+
+function addPlayer(team) {
+  // Place new player in centre of their half
+  const pnx = 0.5;
+  const pny = team === 'home' ? 0.75 : 0.25;
+  const list = team === 'home' ? homePlayers : awayPlayers;
+  const maxN = list.reduce((m, p) => Math.max(m, p.n), 0);
+  const p = { id: _uid++, team, n: maxN + 1, name: '', pos: 'SUB', notes: '', pnx, pny };
+  list.push(p);
+  render();
+  // Open edit modal immediately so coach can name them
+  openEditModal(p);
+  updateHint('New player added — fill in their details.');
+}
+
+// ─── POINTER EVENTS ───────────────────────────────────────────────────────────
+function getCanvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  return { cx: src.clientX - rect.left, cy: src.clientY - rect.top };
+}
+
+let lastTap = 0;
+let lastTapPlayer = null;
+
+function onPointerDown(e) {
+  if (animating) return;
+  e.preventDefault();
+  const { cx, cy } = getCanvasPos(e);
+
+  if (mode === 'drag') {
+    const p = hitPlayer(cx, cy);
+    if (p) {
+      // Double-tap detection
+      const now = Date.now();
+      if (lastTapPlayer === p && now - lastTap < 400) {
+        lastTap = 0; lastTapPlayer = null;
+        openEditModal(p);
+        return;
+      }
+      lastTap = now; lastTapPlayer = p;
+      dragging = { player: p, startX: cx, startY: cy, moved: false };
+    }
+  } else {
+    // Draw mode
+    const norm = canvasToNorm(cx, cy);
+    drawing = { x1: norm.pnx, y1: norm.pny, cx, cy };
+  }
+}
+
+function onPointerMove(e) {
+  if (animating) return;
+  e.preventDefault();
+  const { cx, cy } = getCanvasPos(e);
+
+  if (dragging) {
+    const dx = cx - dragging.startX, dy = cy - dragging.startY;
+    if (!dragging.moved && dx * dx + dy * dy > 9) dragging.moved = true;
+    if (dragging.moved) {
+      const norm = canvasToNorm(cx, cy);
+      // Keep player within their half
+      const p = dragging.player;
+      const minY = p.team === 'home' ? 0.01 : 0.01;
+      const maxY = p.team === 'home' ? 0.99 : 0.99;
+      p.pnx = Math.max(0.01, Math.min(0.99, norm.pnx));
+      p.pny = Math.max(minY, Math.min(maxY, norm.pny));
+      render();
+    }
+  } else if (drawing) {
+    drawing.cx = cx;
+    drawing.cy = cy;
+    render();
+  }
+}
+
+function onPointerUp(e) {
+  if (animating) return;
+  e.preventDefault();
+
+  if (dragging) {
+    const wasTap = !dragging.moved;
+    const tappedPlayer = dragging.player;
+    dragging = null;
+    render();
+    // A tap that didn't move and isn't the first half of a double-tap shows the info card.
+    if (wasTap) {
+      const tp = tappedPlayer;
+      setTimeout(() => {
+        // If a double-tap opened the edit modal in the meantime, don't show info.
+        if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
+        showInfoCard(tp);
+      }, 260);
+    }
+  } else if (drawing) {
+    const { cx, cy } = e.changedTouches
+      ? { cx: e.changedTouches[0].clientX - canvas.getBoundingClientRect().left,
+          cy: e.changedTouches[0].clientY - canvas.getBoundingClientRect().top }
+      : getCanvasPos(e);
+
+    const n2 = canvasToNorm(cx, cy);
+    const dx  = n2.pnx - drawing.x1, dy = n2.pny - drawing.y1;
+    if (dx * dx + dy * dy > 0.001) {
+      const arrow = { id: _uid++, x1: drawing.x1, y1: drawing.y1, x2: n2.pnx, y2: n2.pny };
+      if (mode === 'draw-home') homeArrows.push(arrow);
+      else                      awayArrows.push(arrow);
+    }
+    drawing = null;
+    render();
+  }
+}
+
+// ─── FORMATION SELECTS ────────────────────────────────────────────────────────
+// Player count per format ('7' → 7 outfield+gk etc.)
+function formatToCount(fmt) {
+  return fmt === '7' ? 7 : fmt === '9' ? 9 : fmt === '11' ? 11 : null;
+}
+
+function buildFormationSelects(filterCount) {
+  // Only show formations whose squad size matches the chosen game format.
+  const names = filterCount
+    ? FORMATION_NAMES.filter(n => FORMATIONS[n].length === filterCount)
+    : FORMATION_NAMES;
+  for (const id of ['home-formation', 'away-formation']) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    for (const name of names) {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      sel.appendChild(opt);
+    }
+  }
+
+  document.getElementById('home-formation').addEventListener('change', e => {
+    applyFormation(e.target.value, 'home');
+    render();
+  });
+  document.getElementById('away-formation').addEventListener('change', e => {
+    applyFormation(e.target.value, 'away');
+    render();
+  });
+}
+
+// ─── MODE BUTTONS ─────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m;
+  canvas.style.cursor = m === 'drag' ? 'default' : 'crosshair';
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  const map = { 'drag': 'btn-drag', 'draw-home': 'btn-draw-home', 'draw-away': 'btn-draw-away' };
+  document.getElementById(map[m])?.classList.add('active');
+}
+
+// ─── HINT ─────────────────────────────────────────────────────────────────────
+function updateHint(msg) {
+  document.getElementById('hint').textContent = msg;
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function exportJSON() {
+  const data = {
+    phases: phases.filter(Boolean).map((ph, i) => ({
+      index: i,
+      homePlayers: ph.homePlayers,
+      awayPlayers: ph.awayPlayers,
+      homeArrows:  ph.homeArrows,
+      awayArrows:  ph.awayArrows,
+    })),
+    current: captureState(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'tactics-board.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─── RESIZE HANDLING ──────────────────────────────────────────────────────────
+function initCanvas() {
+  const container = document.getElementById('canvas-container');
+  const cssW = container.clientWidth;
+  // Bail if the board isn't visible yet (e.g. inside a collapsed section) —
+  // a zero/negative width would produce negative pitch radii and throw.
+  if (cssW <= 0) return;
+  const cssH = Math.round(cssW * PITCH_RATIO + PITCH_PAD_Y * 2);
+
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+
+  ctx = canvas.getContext('2d');
+
+  cw = cssW;
+  ch = cssH;
+  computePitchGeometry();
+  render();
+}
+
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(initCanvas, 120);
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+setTimeout(() => {
+  canvas = document.getElementById('pitch');
+
+  // Read saved game format and only offer formations that fit it.
+  const savedFormat = localStorage.getItem('matchday-format');
+  const count = formatToCount(savedFormat);
+  buildFormationSelects(count);
+  buildPhaseSlots();
+
+  // Default formation matches the format (falls back to first available option).
+  const defaults = { '7': '2-3-1', '9': '3-2-3', '11': '4-3-3' };
+  const def = defaults[savedFormat] || document.getElementById('home-formation').value;
+  document.getElementById('home-formation').value = def;
+  document.getElementById('away-formation').value = def;
+  applyFormation(def, 'home');
+  applyFormation(def, 'away');
+
+  // Per-phase boards open as an exact clone of the locked first board — same
+  // formations, both teams, names, positions and notes. Signalled via ?roster=1.
+  const params = new URLSearchParams(location.search);
+  if (params.get('roster') === '1') {
+    try {
+      const board = JSON.parse(localStorage.getItem('matchday-board') || 'null');
+      if (board) {
+        applyFullBoard(board);
+      } else {
+        // Backwards-compat: older saves only stored the home roster.
+        const saved = JSON.parse(localStorage.getItem('matchday-roster') || 'null');
+        if (saved && saved.length) homePlayers = saved.map(p => ({ ...p, id: _uid++ }));
+      }
+    } catch (e) {}
+  }
+  // NOTE: do not call render() here — ctx is not created until initCanvas() below.
+
+  // Event listeners
+  canvas.addEventListener('mousedown',  onPointerDown, { passive: false });
+  canvas.addEventListener('mousemove',  onPointerMove, { passive: false });
+  canvas.addEventListener('mouseup',    onPointerUp,   { passive: false });
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  canvas.addEventListener('touchmove',  onPointerMove, { passive: false });
+  canvas.addEventListener('touchend',   onPointerUp,   { passive: false });
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => setMode(btn.dataset.mode));
+  });
+
+  document.getElementById('btn-clear-arrows').addEventListener('click', () => {
+    homeArrows = []; awayArrows = [];
+    updateHint('Arrows cleared.');
+    render();
+  });
+
+  document.getElementById('btn-save-phase').addEventListener('click', savePhase);
+  document.getElementById('btn-animate').addEventListener('click', animatePhases);
+  document.getElementById('btn-export').addEventListener('click', exportJSON);
+
+  document.getElementById('edit-save').addEventListener('click', saveEdit);
+  document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+  document.getElementById('edit-remove').addEventListener('click', removePlayer);
+  document.getElementById('modal-backdrop').addEventListener('click', closeEditModal);
+  document.getElementById('btn-add-home').addEventListener('click', () => addPlayer('home'));
+  document.getElementById('btn-add-away').addEventListener('click', () => addPlayer('away'));
+  document.getElementById('info-close').addEventListener('click', closeInfoCard);
+  document.getElementById('info-edit').addEventListener('click', () => { if (infoTarget) openEditModal(infoTarget); });
+  document.getElementById('edit-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });
+  document.getElementById('edit-pos').addEventListener('keydown',  e => { if (e.key === 'Enter') saveEdit(); });
+  document.getElementById('edit-number').addEventListener('keydown', e => { if (e.key === 'Enter') saveEdit(); });
+
+  initCanvas();
+  updatePhaseUI();
+
+  // Re-init when the container changes size — handles a board being revealed
+  // after its section is expanded (display:none → block gives it real width).
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => {
+      const w = document.getElementById('canvas-container').clientWidth;
+      if (w > 0 && w !== cw) initCanvas();
+    });
+    ro.observe(document.getElementById('canvas-container'));
+  }
+}, 100);
+
+// ─── EMBEDDED MODE ────────────────────────────────────────────────────────────
+window.addEventListener('message', e => {
+  if (e.data === 'matchday:getState') {
+    // Attach each player's position as a fraction of the snapshot canvas so a
+    // shared/exported board can overlay clickable hotspots on the image.
+    const withXY = arr => arr.map(p => ({
+      ...p,
+      fx: cw ? (pitchLeft + p.pnx * pitchWidth) / cw : p.pnx,
+      fy: ch ? (pitchTop  + p.pny * pitchHeight) / ch : p.pny,
+    }));
+    const state = {
+      homePlayers: withXY(homePlayers),
+      awayPlayers: withXY(awayPlayers),
+      homeArrows:  homeArrows.map(a => ({ ...a })),
+      awayArrows:  awayArrows.map(a => ({ ...a })),
+      phases: phases.map((ph, i) => ph ? { index: i, ...ph } : null),
+      homeFormation: document.getElementById('home-formation').value,
+      awayFormation: document.getElementById('away-formation').value,
+      snapshot: (canvas && homePlayers.length) ? canvas.toDataURL('image/png') : '',
+    };
+    e.source.postMessage({ type: 'matchday:tacticsState', data: state }, '*');
+  }
+
+  // Clone the full locked board from the parent (both teams, formations, names).
+  if (e.data && e.data.type === 'matchday:setBoard') {
+    applyFullBoard(e.data.board);
+    if (ctx) render();
+  }
+
+  // Pre-populate home players from parent (legacy lineup sync).
+  if (e.data && e.data.type === 'matchday:setPlayers') {
+    const incoming = e.data.players;
+    if (!incoming || !incoming.length) return;
+    homePlayers = incoming.map(p => ({ ...p, id: _uid++ }));
+    if (ctx) render();
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MatchDay — Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --black:    #06080C;
+  --card:     #10161F;
+  --card2:    #0d1219;
+  --border:   #232D3A;
+  --border2:  #1a2330;
+  --gold:     #F0C040;
+  --gold-dim: #B08820;
+  --gold-bg:  rgba(240,192,64,.07);
+  --white:    #F4F6FA;
+  --body:     #D8DFE8;
+  --muted:    #4A5568;
+  --green:    #50F090;
+  --green-bg: rgba(80,240,144,.07);
+  --red:      #FF5050;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--body);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 130px;
+}
+#app { max-width: 680px; margin: 0 auto; padding: 0 16px; }
+
+/* ── TOP BAR ── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 0;
+  margin-bottom: 24px;
+}
+.wordmark {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: .06em;
+  color: var(--white);
+}
+.wordmark span { color: var(--gold); }
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  color: var(--body);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .15s;
+}
+.back-btn:hover { border-color: var(--gold-dim); color: var(--white); }
+
+/* ── MATCH HERO ── */
+.match-hero {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.match-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 300px 200px at 80% -20%, rgba(240,192,64,.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.match-vs {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px, 7vw, 44px);
+  letter-spacing: .03em;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 12px;
+}
+.match-vs .vs-sep {
+  color: var(--gold);
+  margin: 0 8px;
+  font-size: .65em;
+  vertical-align: middle;
+}
+.match-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.meta-pill {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--body);
+  background: var(--card2);
+}
+.meta-pill.gold { border-color: rgba(240,192,64,.3); color: var(--gold); background: var(--gold-bg); }
+.match-theme {
+  font-size: 15px;
+  color: var(--white);
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 12px 14px;
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.15);
+  border-radius: 8px;
+  font-style: italic;
+}
+.match-theme::before {
+  content: '"';
+  color: var(--gold);
+  font-style: normal;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  line-height: 0;
+  vertical-align: -3px;
+  margin-right: 2px;
+}
+.match-theme::after {
+  content: '"';
+  color: var(--gold);
+  font-style: normal;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  line-height: 0;
+  vertical-align: -3px;
+  margin-left: 2px;
+}
+
+/* ── CALIBRATION ROW ── */
+.calibration-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.cal-card {
+  flex: 1;
+  min-width: 140px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.cal-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.cal-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: .04em;
+  color: var(--gold);
+  line-height: 1;
+}
+.cal-track {
+  margin-top: 8px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cal-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: width .3s;
+}
+
+/* ── SECTION HEADER ── */
+.section-header {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 20px 0 8px;
+}
+
+/* ── PHASE PREVIEW CARDS ── */
+.phase-preview {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.phase-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+}
+.phase-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.2);
+  border-radius: 4px;
+  padding: 3px 7px;
+  flex-shrink: 0;
+}
+.phase-preview-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: .05em;
+  color: var(--white);
+  flex: 1;
+}
+.board-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .08em;
+  color: var(--green);
+  background: var(--green-bg);
+  border: 1px solid rgba(80,240,144,.2);
+  border-radius: 4px;
+  padding: 3px 7px;
+  flex-shrink: 0;
+}
+.phase-preview-notes {
+  padding: 0 16px 14px;
+  font-size: 13px;
+  color: var(--body);
+  line-height: 1.55;
+  border-top: 1px solid var(--border2);
+  padding-top: 12px;
+}
+.phase-preview-notes.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+.phase-preview-notes .clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── LINEUP CARD ── */
+.lineup-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+.lineup-card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: .07em;
+  color: var(--white);
+  margin-bottom: 12px;
+}
+.lineup-names {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.lineup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.lineup-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--gold);
+  width: 22px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.lineup-name { color: var(--body); }
+.lineup-pos {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+}
+.lineup-empty { color: var(--muted); font-style: italic; font-size: 13px; }
+
+/* ── BENCH CARD ── */
+.bench-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border2);
+}
+.bench-preview-row:last-child { border-bottom: none; }
+
+/* ── WARNINGS ── */
+.warning-box {
+  background: rgba(255,80,80,.06);
+  border: 1px solid rgba(255,80,80,.2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--red);
+}
+.warning-box ul { margin-left: 14px; margin-top: 4px; }
+.warning-box li { margin-bottom: 3px; }
+
+/* ── STICKY FOOTER ── */
+#footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, var(--black) 65%, transparent);
+  padding: 18px 16px 24px;
+  z-index: 50;
+}
+.footer-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  display: flex;
+  gap: 10px;
+}
+.edit-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--body);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 14px 20px;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.edit-btn:hover { border-color: var(--gold-dim); color: var(--white); }
+.generate-btn {
+  flex: 1;
+  background: var(--gold);
+  border: none;
+  border-radius: 10px;
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: .1em;
+  padding: 14px 24px;
+  cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 4px 24px rgba(240,192,64,.25);
+}
+.generate-btn:hover { background: #d4a82e; transform: translateY(-1px); box-shadow: 0 6px 30px rgba(240,192,64,.35); }
+.generate-btn:active { transform: translateY(0); }
+.generate-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* ── MISSING FIELD ── */
+.missing { border-color: rgba(255,80,80,.4) !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top-bar">
+    <div class="wordmark">Match<span>Day</span></div>
+    <a class="back-btn" href="report.html">← Back to Edit</a>
+  </div>
+
+  <div id="preview-content"></div>
+</div>
+
+<div id="footer-bar">
+  <div class="footer-inner">
+    <a class="edit-btn" href="report.html">← Edit</a>
+    <button class="generate-btn" id="btn-generate">Generate Report →</button>
+  </div>
+</div>
+
+<script>
+const PHASES = [
+  { id: 'buildup',      label: 'Buildup',       num: 'IN POSSESSION'   },
+  { id: 'press',        label: 'Press',          num: 'OUT OF POSSESSION' },
+  { id: 'rest-defence', label: 'Rest Defence',   num: 'TRANSITION'      },
+  { id: 'block',        label: 'Block',          num: 'DEFENSIVE'       },
+  { id: 'mentality',    label: 'Mentality',      num: 'MINDSET'         },
+];
+
+const COMP_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
+
+function formatDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function formatTime(timeStr) {
+  if (!timeStr) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  const suffix = h >= 12 ? 'pm' : 'am';
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, '0')}${suffix}`;
+}
+
+function parseLineup(raw) {
+  if (!raw || !raw.trim()) return [];
+  return raw.trim().split('\n').filter(Boolean).map(line => {
+    const numMatch = line.match(/^(\d+)[.\s]+/);
+    const num = numMatch ? numMatch[1] : '';
+    const rest = numMatch ? line.slice(numMatch[0].length) : line;
+    const posMatch = rest.match(/\(([^)]+)\)$/);
+    const pos = posMatch ? posMatch[1] : '';
+    const name = posMatch ? rest.slice(0, -posMatch[0].length).trim() : rest.trim();
+    return { num, name, pos };
+  });
+}
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text) e.textContent = text;
+  return e;
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function render(data) {
+  const container = document.getElementById('preview-content');
+  container.innerHTML = '';
+
+  // ── WARNINGS ───────────────────────────────────────────────────────────────
+  const warnings = [];
+  if (!data.teamName) warnings.push('Team name is required');
+  if (!data.opponent) warnings.push('Opponent name is required');
+  if (!data.matchDate) warnings.push('Match date is required');
+  const hasAnyNotes = PHASES.some(ph => data.phases && data.phases[ph.id] && data.phases[ph.id].notes.trim());
+  if (!hasAnyNotes) warnings.push('No coaching notes added — all sections will generate from match context only');
+
+  if (warnings.length) {
+    const box = el('div', 'warning-box');
+    box.innerHTML = `<strong>Before you generate</strong><ul>${warnings.map(w => `<li>${w}</li>`).join('')}</ul>`;
+    container.appendChild(box);
+  }
+
+  // ── MATCH HERO ─────────────────────────────────────────────────────────────
+  const hero = el('div', 'match-hero');
+
+  const vs = el('div', 'match-vs');
+  vs.innerHTML = `${data.teamName || '<span style="color:var(--muted)">Your Team</span>'}
+    <span class="vs-sep">vs</span>
+    ${data.opponent || '<span style="color:var(--muted)">Opponent</span>'}`;
+  hero.appendChild(vs);
+
+  const metaRow = el('div', 'match-meta-row');
+  if (data.matchDate) {
+    const dp = el('span', 'meta-pill gold', formatDate(data.matchDate));
+    metaRow.appendChild(dp);
+  }
+  if (data.kickoffTime) {
+    const tp = el('span', 'meta-pill', '⏱ ' + formatTime(data.kickoffTime));
+    metaRow.appendChild(tp);
+  }
+  if (data.venue) {
+    const vp = el('span', 'meta-pill', '📍 ' + data.venue);
+    metaRow.appendChild(vp);
+  }
+  if (data.captain) {
+    const cp = el('span', 'meta-pill', '© ' + data.captain);
+    metaRow.appendChild(cp);
+  }
+  hero.appendChild(metaRow);
+
+  if (data.matchTheme && data.matchTheme.trim()) {
+    const theme = el('div', 'match-theme', data.matchTheme.trim());
+    hero.appendChild(theme);
+  }
+
+  container.appendChild(hero);
+
+  // ── CALIBRATION ────────────────────────────────────────────────────────────
+  const age  = data.age  || 12;
+  const comp = data.comp || 3;
+  const agePct  = ((age - 5) / (19 - 5)) * 100;
+  const compPct = ((comp - 1) / 4) * 100;
+
+  const calRow = el('div', 'calibration-row');
+
+  const ageCard = el('div', 'cal-card');
+  ageCard.innerHTML = `
+    <div class="cal-label">Player Age</div>
+    <div class="cal-value">${age >= 19 ? 'Adult' : age}</div>
+    <div class="cal-track"><div class="cal-fill" style="width:${agePct}%"></div></div>
+  `;
+
+  const compCard = el('div', 'cal-card');
+  compCard.innerHTML = `
+    <div class="cal-label">Tactical Comprehension</div>
+    <div class="cal-value" style="font-size:20px;line-height:1.2">${COMP_LABELS[comp]}</div>
+    <div class="cal-track"><div class="cal-fill" style="width:${compPct}%"></div></div>
+  `;
+
+  calRow.appendChild(ageCard);
+  calRow.appendChild(compCard);
+  container.appendChild(calRow);
+
+  // ── LINEUP BOARD & ROLES ─────────────────────────────────────────────────
+  let board = null;
+  try { board = JSON.parse(localStorage.getItem('matchday-board') || 'null'); } catch(e) {}
+  if (board && (board.snapshot || (board.homePlayers && board.homePlayers.length))) {
+    container.appendChild(el('div', 'section-header', 'Lineup & Roles'));
+    const bc = el('div', 'lineup-card');
+    if (board.snapshot) {
+      const img = document.createElement('img');
+      img.src = board.snapshot;
+      img.style.cssText = 'display:block;width:100%;height:auto;border-radius:8px;margin-bottom:10px';
+      bc.appendChild(img);
+    }
+    const withNotes = (board.homePlayers || []).filter(p => (p.name && p.name.trim()) || (p.notes && p.notes.trim()));
+    for (const p of withNotes) {
+      const row = el('div', 'bench-preview-row');
+      row.style.alignItems = 'flex-start';
+      row.innerHTML = `
+        <span class="lineup-num">${p.n || '—'}</span>
+        <div style="flex:1;min-width:0">
+          <div><span class="lineup-name">${escHtml(p.name || 'Unnamed')}</span>${p.pos ? ` <span class="lineup-pos">${escHtml(p.pos)}</span>` : ''}</div>
+          ${p.notes && p.notes.trim() ? `<div style="font-size:13px;color:var(--body);line-height:1.5;margin-top:3px;white-space:pre-wrap">${escHtml(p.notes)}</div>` : ''}
+        </div>`;
+      bc.appendChild(row);
+    }
+    container.appendChild(bc);
+  }
+
+  // ── TACTICAL PHASES ────────────────────────────────────────────────────────
+  const visiblePhases = PHASES.filter(ph => !(data.phases && Object.keys(data.phases).length && !data.phases[ph.id]));
+  if (visiblePhases.length) container.appendChild(el('div', 'section-header', 'Tactical Phases'));
+
+  for (const ph of PHASES) {
+    // Skip sections the coach removed (absent from saved phases).
+    if (data.phases && Object.keys(data.phases).length && !data.phases[ph.id]) continue;
+    const phData = (data.phases && data.phases[ph.id]) || {};
+    const notes  = (phData.notes || '').trim();
+    const hasBoard = phData.boardLocked;
+
+    const card = el('div', 'phase-preview');
+
+    const hdr = el('div', 'phase-preview-header');
+    hdr.innerHTML = `
+      <span class="phase-tag">${ph.num}</span>
+      <span class="phase-preview-name">${ph.label}</span>
+      ${hasBoard ? '<span class="board-badge">⊕ Board</span>' : ''}
+    `;
+    card.appendChild(hdr);
+
+    const notesEl = el('div', 'phase-preview-notes' + (notes ? '' : ' empty'));
+    if (notes) {
+      const clamp = el('div', 'clamp', notes);
+      notesEl.appendChild(clamp);
+    } else {
+      notesEl.textContent = 'No notes — AI generates from match context';
+    }
+    card.appendChild(notesEl);
+
+    container.appendChild(card);
+  }
+
+  // ── LINEUP ─────────────────────────────────────────────────────────────────
+  const lineup = parseLineup(data.lineup || '');
+  if (lineup.length > 0 || (data.bench && data.bench.some(b => b.name))) {
+    container.appendChild(el('div', 'section-header', 'Squad'));
+  }
+
+  if (lineup.length > 0) {
+    const lc = el('div', 'lineup-card');
+    lc.innerHTML = `<div class="lineup-card-title">Starting Lineup · ${lineup.length} players</div>`;
+    const rows = el('div', 'lineup-names');
+    for (const p of lineup) {
+      const row = el('div', 'lineup-row');
+      row.innerHTML = `
+        <span class="lineup-num">${p.num}</span>
+        <span class="lineup-name">${p.name || '—'}</span>
+        ${p.pos ? `<span class="lineup-pos">${p.pos}</span>` : ''}
+      `;
+      rows.appendChild(row);
+    }
+    lc.appendChild(rows);
+    container.appendChild(lc);
+  }
+
+  // ── BENCH ──────────────────────────────────────────────────────────────────
+  const bench = (data.bench || []).filter(b => b.name && b.name.trim());
+  if (bench.length > 0) {
+    const bc = el('div', 'lineup-card');
+    bc.innerHTML = `<div class="lineup-card-title">Bench · ${bench.length} substitutes</div>`;
+    for (const b of bench) {
+      const row = el('div', 'bench-preview-row');
+      row.innerHTML = `
+        <span class="lineup-num">${b.num || '—'}</span>
+        <span class="lineup-name">${b.name}</span>
+        ${b.pos ? `<span class="lineup-pos">${b.pos}</span>` : ''}
+      `;
+      bc.appendChild(row);
+    }
+    container.appendChild(bc);
+  }
+
+  // ── OPPOSITION NOTES ───────────────────────────────────────────────────────
+  if (data.oppNotes && data.oppNotes.trim()) {
+    container.appendChild(el('div', 'section-header', 'Opposition'));
+    const oc = el('div', 'lineup-card');
+    oc.innerHTML = `<div class="lineup-card-title">Scout Notes</div>`;
+    const oBody = el('div');
+    oBody.style.cssText = 'font-size:13px;color:var(--body);line-height:1.55';
+    oBody.textContent = data.oppNotes.trim();
+    oc.appendChild(oBody);
+    container.appendChild(oc);
+  }
+}
+
+// ── LOAD DATA & RENDER ───────────────────────────────────────────────────────
+const raw = localStorage.getItem('matchday-report-form');
+let data = {};
+if (raw) {
+  try { data = JSON.parse(raw); } catch(e) {}
+}
+
+if (!data.teamName && !data.opponent) {
+  // Nothing filled in — redirect back to form
+  document.getElementById('preview-content').innerHTML =
+    `<div style="text-align:center;padding:60px 20px;color:var(--muted)">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--body);margin-bottom:12px">Nothing here yet</div>
+      <div style="font-size:14px;margin-bottom:24px">Fill in the report builder first.</div>
+      <a href="report.html" style="color:var(--gold);font-size:14px">← Go to Report Builder</a>
+    </div>`;
+  document.getElementById('btn-generate').disabled = true;
+} else {
+  render(data);
+}
+
+// ── GENERATE ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-generate').addEventListener('click', () => {
+  if (!data.teamName || !data.opponent || !data.matchDate) {
+    alert('Please go back and fill in team name, opponent, and date.');
+    return;
+  }
+  // Phase 4 — navigate to generate screen
+  window.location.href = 'generate.html';
+});
+</script>
+</body>
+</html>

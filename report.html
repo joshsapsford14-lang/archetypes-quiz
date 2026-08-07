@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MatchDay — Report Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --black:    #06080C;
+  --card:     #10161F;
+  --card2:    #0d1219;
+  --border:   #232D3A;
+  --border2:  #1a2330;
+  --gold:     #F0C040;
+  --gold-dim: #B08820;
+  --gold-bg:  rgba(240,192,64,.07);
+  --white:    #F4F6FA;
+  --body:     #D8DFE8;
+  --muted:    #4A5568;
+  --green:    #50F090;
+  --red:      #FF5050;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--body);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 120px;
+}
+
+#app {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 20px 0 0;
+  margin-bottom: 28px;
+}
+.wordmark {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: .06em;
+  color: var(--white);
+  margin-bottom: 2px;
+}
+.wordmark span { color: var(--gold); }
+.page-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px;
+  letter-spacing: .04em;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.page-sub {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 18px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.card-header-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.card-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: .07em;
+  color: var(--white);
+}
+.card-body { padding: 0 18px 18px; }
+
+/* ── FIELDS ── */
+.field { margin-bottom: 16px; }
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.req-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+}
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  background: var(--black);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .15s;
+  -webkit-appearance: none;
+}
+.field input:focus,
+.field textarea:focus { border-color: var(--gold); }
+.field textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+.field input::placeholder,
+.field textarea::placeholder { color: var(--muted); }
+.field-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 5px;
+  line-height: 1.4;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 400px) { .field-row { grid-template-columns: 1fr; } }
+
+.char-count {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  margin-top: 4px;
+}
+.char-count.warn { color: var(--gold); }
+
+/* ── SLIDERS ── */
+.slider-section {
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.15);
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 12px;
+}
+.slider-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.slider-section-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: .07em;
+  color: var(--gold);
+}
+.slider-section-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+.slider-wrap { margin-bottom: 24px; }
+.slider-wrap:last-child { margin-bottom: 0; }
+.slider-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.slider-name {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.slider-value {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: .04em;
+  color: var(--gold);
+}
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid var(--black);
+  box-shadow: 0 0 0 1px var(--gold);
+  cursor: pointer;
+  transition: transform .1s;
+}
+input[type=range]::-webkit-slider-thumb:active { transform: scale(1.15); }
+input[type=range]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: 3px solid var(--black);
+  cursor: pointer;
+}
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.slider-tick {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: .04em;
+}
+
+/* ── LANGUAGE PREVIEW ── */
+.lang-preview {
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 7px;
+  padding: 12px 14px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--body);
+  line-height: 1.55;
+  font-style: italic;
+  min-height: 52px;
+  transition: opacity .2s;
+}
+.lang-preview-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-style: normal;
+}
+
+/* ── PHASE SECTIONS ── */
+.phase-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.phase-header:hover .phase-title { color: var(--white); }
+.phase-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.2);
+  border-radius: 5px;
+  padding: 3px 8px;
+  flex-shrink: 0;
+}
+.phase-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: .05em;
+  color: var(--white);
+  flex: 1;
+  transition: color .15s;
+}
+.phase-delete {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  transition: color .15s;
+}
+.phase-delete:hover { color: #FF5050; }
+.phase-chevron {
+  font-size: 16px;
+  color: var(--muted);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.phase-card.open .phase-chevron { transform: rotate(180deg); }
+.phase-body { display: none; }
+.phase-card.open .phase-body { display: block; }
+.phase-body-inner {
+  padding: 0 18px 18px;
+  border-top: 1px solid var(--border2);
+  padding-top: 16px;
+}
+.phase-body-inner textarea {
+  width: 100%;
+  background: var(--black);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.55;
+  transition: border-color .15s;
+}
+.phase-body-inner textarea:focus { border-color: var(--gold); }
+.phase-body-inner textarea::placeholder { color: var(--muted); font-style: italic; }
+.phase-notes-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: block;
+}
+.phase-tactics-area { margin-top: 14px; }
+.phase-tactics-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: left;
+}
+.phase-tactics-toggle:hover { border-color: var(--gold-dim); color: var(--body); }
+.phase-tactics-toggle.has-board { border-style: solid; border-color: var(--green); color: var(--green); }
+.phase-tactics-iframe-wrap { margin-top: 10px; display: none; }
+.phase-tactics-iframe-wrap.open { display: block; }
+.phase-tactics-iframe-wrap iframe {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  min-height: 520px;
+  display: block;
+  background: #0a1a0f;
+}
+.phase-lock-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--gold);
+  border: none;
+  border-radius: 7px;
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.phase-lock-btn:hover { background: #d4a82e; }
+
+/* ── LINEUP IMPORT ── */
+.lineup-import-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+  margin-bottom: 10px;
+}
+.lineup-import-btn:hover { border-color: var(--gold-dim); color: var(--body); }
+.lineup-import-btn .arrow { font-size: 16px; }
+
+/* ── BENCH ROWS ── */
+.bench-rows { display: flex; flex-direction: column; gap: 6px; }
+.bench-row {
+  display: grid;
+  grid-template-columns: 44px 1fr 100px;
+  gap: 6px;
+}
+.bench-row input {
+  background: var(--black);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  transition: border-color .15s;
+}
+.bench-row input:focus { border-color: var(--gold); }
+.bench-row input::placeholder { color: var(--muted); }
+.bench-add {
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all .15s;
+  margin-top: 4px;
+}
+.bench-add:hover { border-color: var(--gold-dim); color: var(--body); }
+.bench-remove {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  align-self: center;
+  transition: color .15s;
+}
+.bench-remove:hover { color: var(--red); }
+
+/* ── STICKY FOOTER ── */
+#footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, var(--black) 70%, transparent);
+  padding: 20px 16px 24px;
+  display: flex;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+}
+.preview-btn {
+  pointer-events: all;
+  background: var(--gold);
+  border: none;
+  border-radius: 10px;
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: .1em;
+  padding: 14px 48px;
+  cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 4px 24px rgba(240,192,64,.25);
+  max-width: 400px;
+  width: 100%;
+}
+.preview-btn:hover { background: #d4a82e; transform: translateY(-1px); box-shadow: 0 6px 28px rgba(240,192,64,.35); }
+.preview-btn:active { transform: translateY(0); }
+
+/* ── TACTICS LINK ── */
+.tactics-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--body);
+  font-size: 13px;
+  text-decoration: none;
+  transition: all .15s;
+  margin-bottom: 10px;
+}
+.tactics-link:hover { border-color: var(--gold-dim); color: var(--white); }
+.tactics-link-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .1em;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: auto;
+}
+
+/* ── SECTION DIVIDER ── */
+.section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+/* ── ANIMATIONS ── */
+.section-notes { animation: none; }
+.section-item.checked .section-notes {
+  display: block;
+  animation: expandIn .18s ease both;
+}
+@keyframes expandIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="wordmark">Match<span>Day</span></div>
+    <div class="page-title">Report Builder</div>
+    <div class="page-sub">Fill in what you know. Leave the rest to the application.</div>
+  </header>
+
+  <!-- ── GAME FORMAT ── -->
+  <div class="card" id="format-card">
+    <div class="card-header">
+      <div class="card-header-icon">🏟</div>
+      <div class="card-title">Game Format</div>
+    </div>
+    <div class="card-body">
+      <div class="field-hint" style="margin-bottom:12px">Set this first — it determines formations, player count, and how the AI writes about the game.</div>
+      <div id="format-btns" style="display:flex;gap:8px">
+        <button class="format-btn" data-format="7" style="flex:1;padding:14px 8px;background:var(--black);border:1px solid var(--border);border-radius:8px;color:var(--body);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;cursor:pointer;transition:all .15s">7v7</button>
+        <button class="format-btn" data-format="9" style="flex:1;padding:14px 8px;background:var(--black);border:1px solid var(--border);border-radius:8px;color:var(--body);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;cursor:pointer;transition:all .15s">9v9</button>
+        <button class="format-btn" data-format="11" style="flex:1;padding:14px 8px;background:var(--black);border:1px solid var(--border);border-radius:8px;color:var(--body);font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;cursor:pointer;transition:all .15s">11v11</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MATCH INFO ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">📋</div>
+      <div class="card-title">Match Info</div>
+    </div>
+    <div class="card-body">
+      <div class="field-row">
+        <div class="field">
+          <div class="field-label"><div class="req-dot"></div> Our Team</div>
+          <input id="team-name" type="text" placeholder="e.g. Rovers U12" autocomplete="off">
+        </div>
+        <div class="field">
+          <div class="field-label"><div class="req-dot"></div> Opponent</div>
+          <input id="opponent" type="text" placeholder="e.g. City FC" autocomplete="off">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <div class="field-label"><div class="req-dot"></div> Date</div>
+          <input id="match-date" type="date">
+        </div>
+        <div class="field">
+          <div class="field-label"><div class="req-dot"></div> Kickoff</div>
+          <input id="kickoff-time" type="time">
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">Venue</div>
+        <input id="venue" type="text" placeholder="Ground name or address">
+      </div>
+      <div class="field">
+        <div class="field-label">Match Theme</div>
+        <input id="match-theme" type="text" placeholder="One line — what this match is about" maxlength="80" id="match-theme">
+        <div class="char-count" id="theme-char">0 / 80</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+          <div id="theme-mode-toggle" style="width:36px;height:20px;border-radius:10px;background:var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0" title="Toggle theme mode">
+            <div id="theme-mode-knob" style="width:16px;height:16px;border-radius:50%;background:var(--white);position:absolute;top:2px;left:2px;transition:left .2s"></div>
+          </div>
+          <span id="theme-mode-label" style="font-size:11px;color:var(--muted)">AI will expand this into the report's tone</span>
+        </div>
+        <input type="hidden" id="theme-keep-exact" value="0">
+      </div>
+      <div class="field">
+        <div class="field-label">Captain</div>
+        <input id="captain" type="text" placeholder="Name">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── OPPOSITION ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">🔍</div>
+      <div class="card-title">Opposition Notes</div>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <div class="field-label">What do you know about them?</div>
+        <textarea id="opp-notes" placeholder="Formation, pressing style, key players, known tendencies — brain dump or bullet points, the AI will make sense of it"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TACTICS BOARD ── -->
+  <div class="card" id="tactics-card">
+    <div class="card-header" id="tactics-toggle" style="cursor:pointer;margin-bottom:0;padding-bottom:14px">
+      <div class="card-header-icon">⚽</div>
+      <div style="flex:1">
+        <div class="card-title">Formation &amp; Tactics Board</div>
+        <div class="field-hint" style="margin-top:2px">Set up your formation, draw movement arrows, save phases — then lock it in.</div>
+      </div>
+      <div id="tactics-chevron" style="font-size:18px;color:var(--muted);transition:transform .2s">▼</div>
+    </div>
+    <div id="tactics-body" style="display:none">
+      <div style="padding:0 18px 10px">
+        <div id="tactics-locked-banner" style="display:none;background:rgba(80,240,144,.07);border:1px solid rgba(80,240,144,.2);border-radius:7px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:var(--green);display:flex;align-items:center;gap:8px">
+          <span>✓</span><span id="tactics-locked-text">Formation locked in.</span>
+          <button id="btn-unlock-tactics" style="margin-left:auto;background:transparent;border:1px solid rgba(80,240,144,.3);color:var(--green);border-radius:5px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif">Edit</button>
+        </div>
+        <div id="tactics-iframe-wrap">
+          <iframe
+            id="tactics-iframe"
+            src="tactics.html"
+            style="width:100%;border:none;border-radius:8px;min-height:560px;display:block;background:#0a1a0f"
+            title="Tactics Board"
+          ></iframe>
+        </div>
+        <button id="btn-lock-tactics" style="width:100%;margin-top:10px;padding:11px;background:var(--gold);border:none;border-radius:8px;color:var(--black);font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.08em;cursor:pointer;transition:all .15s">Lock In Formation →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SQUAD ── -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">👥</div>
+      <div class="card-title">Squad</div>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <div class="field-label">Starting Lineup</div>
+        <a href="tactics.html" class="tactics-link" target="_blank">
+          Open Tactics Board
+          <span class="tactics-link-badge">Phase 1</span>
+        </a>
+        <textarea id="lineup" placeholder="Paste your lineup here, or type it — names, numbers, positions. One player per line works fine." style="min-height:100px"></textarea>
+        <div class="field-hint">This populates the lineup display section in the report.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Bench</div>
+        <div class="bench-rows" id="bench-rows"></div>
+        <button class="bench-add" id="btn-add-bench">+ Add substitute</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CALIBRATION ── -->
+  <div class="slider-section">
+    <div class="slider-section-header">
+      <div class="slider-section-title">Language Calibration</div>
+    </div>
+    <div class="slider-section-sub">These two controls shape every word the AI writes. Set them honestly — a mismatch produces the wrong tone.</div>
+
+    <div class="slider-wrap">
+      <div class="slider-label-row">
+        <span class="slider-name">Player Age</span>
+        <span class="slider-value" id="age-display">12</span>
+      </div>
+      <input type="range" id="age-slider" min="5" max="19" value="12" step="1">
+      <div class="slider-ticks">
+        <span class="slider-tick">5</span>
+        <span class="slider-tick">8</span>
+        <span class="slider-tick">11</span>
+        <span class="slider-tick">14</span>
+        <span class="slider-tick">17</span>
+        <span class="slider-tick">Adult</span>
+      </div>
+    </div>
+
+    <div class="slider-wrap">
+      <div class="slider-label-row">
+        <span class="slider-name">Tactical Comprehension</span>
+        <span class="slider-value" id="comp-display">Medium</span>
+      </div>
+      <input type="range" id="comp-slider" min="1" max="5" value="3" step="1">
+      <div class="slider-ticks">
+        <span class="slider-tick">Very Low</span>
+        <span class="slider-tick">Low</span>
+        <span class="slider-tick">Medium</span>
+        <span class="slider-tick">High</span>
+        <span class="slider-tick">Very High</span>
+      </div>
+    </div>
+
+    <div class="lang-preview">
+      <div class="lang-preview-label">Language preview</div>
+      <span id="lang-preview-text"></span>
+    </div>
+  </div>
+
+  <!-- ── TACTICAL PHASES ── -->
+  <div id="tactical-phases"></div>
+  <button id="btn-add-custom-section" style="width:100%;padding:12px;background:transparent;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .15s;margin-bottom:12px">+ Add custom section</button>
+
+</div>
+
+<div id="footer-bar">
+  <button class="preview-btn" id="btn-preview">Preview Report →</button>
+</div>
+
+<script>
+// ─── NEXT SATURDAY DEFAULT ────────────────────────────────────────────────────
+function nextSaturday() {
+  const d = new Date();
+  const daysUntil = (6 - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + daysUntil);
+  return d;
+}
+
+function toDateInput(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+// ─── TACTICAL PHASE DEFINITIONS ──────────────────────────────────────────────
+const PHASES = [
+  {
+    id:          'buildup',
+    label:       'Buildup',
+    num:         'IN POSSESSION',
+    placeholder: 'How do you want to build from the back? Which players carry, which receive, when do you go long? Brain dump — the AI will structure it.',
+  },
+  {
+    id:          'press',
+    label:       'Press',
+    num:         'OUT OF POSSESSION',
+    placeholder: 'When do you press? Who triggers it? What shape do you press in? Which triggers do players look for?',
+  },
+  {
+    id:          'rest-defence',
+    label:       'Rest Defence',
+    num:         'TRANSITION',
+    placeholder: 'What\'s the shape when the ball is in the final third but possession isn\'t won? Who sits, who covers, how compact?',
+  },
+  {
+    id:          'block',
+    label:       'Block',
+    num:         'DEFENSIVE',
+    placeholder: 'Deep defensive shape. Where does the line sit? How compact? When do you hold, when do you step?',
+  },
+  {
+    id:          'mentality',
+    label:       'Mentality',
+    num:         'MINDSET',
+    placeholder: 'How do you want the team to carry themselves? Body language, response to setbacks, energy, leadership, what "good" looks like today.',
+    noBoard:     true,
+  },
+];
+
+// ─── LANGUAGE PREVIEW STRINGS ─────────────────────────────────────────────────
+const LANG_PREVIEWS = {
+  // [ageGroup][compLevel] → preview string
+  young_low:    '"When they have the ball, chase it together. If your teammate goes to press, you follow close behind."',
+  young_med:    '"Press in pairs — one goes, one covers. Don\'t chase it alone or they\'ll play through you."',
+  young_high:   '"Press triggers when they go backwards. First presser forces wide, second cuts the central option."',
+  mid_low:      '"Chase them down as a unit. Don\'t press one-out — wait for a teammate to go with you."',
+  mid_med:      '"Press in pairs — one triggers, one covers the passing lane. Don\'t press alone."',
+  mid_high:     '"Press triggers on the backward pass to their CB. First presser forces wide, second cuts central. Hold the line until the trigger."',
+  old_low:      '"Work in pairs when you press. One steps, one covers. Don\'t go alone."',
+  old_med:      '"Press initiated on negative transition. First presser channels wide, second covers the central lane."',
+  old_high:     '"Press triggers on negative transition. First presser channels to the wide option, second occupies the central passing lane. Midfield line holds shape until the press is committed."',
+  adult_any:    '"Press initiated on negative transition. First presser channels wide, second presser occupies the central passing lane. Midfield line holds shape until press is committed — no ball-watching."',
+};
+
+function getLangPreview(age, comp) {
+  if (age >= 18) return LANG_PREVIEWS.adult_any;
+  const ag = age <= 10 ? 'young' : age <= 14 ? 'mid' : 'old';
+  const cl = comp <= 2 ? 'low' : comp <= 3 ? 'med' : 'high';
+  return LANG_PREVIEWS[`${ag}_${cl}`] || LANG_PREVIEWS.mid_med;
+}
+
+// ─── BUILD TACTICAL PHASES ────────────────────────────────────────────────────
+// Each phase: coach notes textarea + optional per-phase tactics board
+// Declared up here on purpose: loadForm() calls applyFormatUI(), which assigns
+// to currentFormat. If this lived further down, that assignment would hit the
+// temporal dead zone, throw inside loadForm's catch, and leave the coach's
+// saved notes unrestored — which autosave would then overwrite with blanks.
+let currentFormat = localStorage.getItem('matchday-format') || '9';
+
+const phaseBoards = {}; // id → locked tactics state
+
+// Sections the coach has removed (persisted across reloads).
+let removedPhases = new Set();
+try {
+  const _d = JSON.parse(localStorage.getItem('matchday-report-form') || '{}');
+  if (_d.removedPhases) removedPhases = new Set(_d.removedPhases);
+} catch (e) {}
+
+function removePhaseSection(card, phId) {
+  card.remove();
+  delete phaseBoards[phId];
+  removedPhases.add(phId);
+  autoSave();
+}
+
+function buildPhases() {
+  const container = document.getElementById('tactical-phases');
+  for (const ph of PHASES) {
+    if (removedPhases.has(ph.id)) continue;
+    const card = document.createElement('div');
+    card.className = 'phase-card';
+    card.id = 'phase-' + ph.id;
+
+    const boardHTML = ph.noBoard ? '' : `
+          <div class="phase-tactics-area">
+            <button class="phase-tactics-toggle" id="tactics-toggle-${ph.id}">
+              <span>⊕ Add tactics board diagram</span>
+            </button>
+            <div class="phase-tactics-iframe-wrap" id="tactics-wrap-${ph.id}">
+              <iframe
+                src="tactics.html?roster=1"
+                data-phase="${ph.id}"
+                title="Tactics Board — ${ph.label}"
+              ></iframe>
+              <button class="phase-lock-btn" id="lock-${ph.id}">Lock In Diagram →</button>
+            </div>
+          </div>`;
+
+    card.innerHTML = `
+      <div class="phase-header">
+        <span class="phase-num">${ph.num}</span>
+        <span class="phase-title">${ph.label}</span>
+        <button class="phase-delete" title="Remove this section">×</button>
+        <span class="phase-chevron">▼</span>
+      </div>
+      <div class="phase-body">
+        <div class="phase-body-inner">
+          <span class="phase-notes-label">Coach's instructions</span>
+          <textarea id="notes-${ph.id}" placeholder="${ph.placeholder}"></textarea>
+          ${boardHTML}
+        </div>
+      </div>
+    `;
+
+    // Toggle open/close
+    card.querySelector('.phase-header').addEventListener('click', () => {
+      card.classList.toggle('open');
+    });
+
+    // Delete section
+    card.querySelector('.phase-delete').addEventListener('click', e => {
+      e.stopPropagation();
+      if (confirm(`Remove the "${ph.label}" section?`)) removePhaseSection(card, ph.id);
+    });
+
+    if (!ph.noBoard) {
+      // Tactics board toggle
+      const tacticsToggleBtn = card.querySelector('.phase-tactics-toggle');
+      const wrap = card.querySelector('.phase-tactics-iframe-wrap');
+      tacticsToggleBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        wrap.classList.toggle('open');
+      });
+
+      // Lock in button
+      card.querySelector('.phase-lock-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        const iframe = wrap.querySelector('iframe');
+        iframe.contentWindow.postMessage('matchday:getState', '*');
+        iframe._pendingPhase = ph.id;
+      });
+    }
+
+    // Notes auto-save
+    card.querySelector('textarea').addEventListener('input', autoSave);
+
+    container.appendChild(card);
+    // Open first phase by default
+    if (ph.id === 'buildup') card.classList.add('open');
+  }
+}
+
+// Handle postMessage responses from per-phase tactics boards
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'matchday:tacticsState') return;
+  // Find which iframe sent this
+  document.querySelectorAll('.phase-tactics-iframe-wrap iframe').forEach(iframe => {
+    if (iframe.contentWindow === e.source && iframe._pendingPhase) {
+      const phId = iframe._pendingPhase;
+      phaseBoards[phId] = e.data.data;
+      iframe._pendingPhase = null;
+      // Persist the full per-phase board so it survives reloads and can be
+      // exported as an interactive, shareable board.
+      try {
+        const store = JSON.parse(localStorage.getItem('matchday-phase-boards') || '{}');
+        store[phId] = e.data.data;
+        localStorage.setItem('matchday-phase-boards', JSON.stringify(store));
+      } catch(err) {}
+
+      const toggleBtn = document.getElementById('tactics-toggle-' + phId);
+      const wrap = document.getElementById('tactics-wrap-' + phId);
+      const phaseCount = (e.data.data.phases || []).filter(Boolean).length;
+      toggleBtn.innerHTML = `<span>✓ ${e.data.data.homeFormation} · ${phaseCount} phase${phaseCount !== 1 ? 's' : ''} — tap to edit</span>`;
+      toggleBtn.classList.add('has-board');
+      wrap.classList.remove('open');
+      autoSave();
+    }
+  });
+});
+
+// ─── BENCH ROWS ───────────────────────────────────────────────────────────────
+let benchCount = 3;
+
+function addBenchRow(num = '', name = '', pos = '') {
+  const container = document.getElementById('bench-rows');
+  const row = document.createElement('div');
+  row.className = 'bench-row';
+  row.innerHTML = `
+    <input type="number" min="1" max="99" placeholder="#" value="${num}" class="bench-num">
+    <input type="text" placeholder="Name" value="${name}" class="bench-name">
+    <input type="text" placeholder="Position" value="${pos}" class="bench-pos">
+    <button class="bench-remove" title="Remove">×</button>
+  `;
+  row.querySelector('.bench-remove').addEventListener('click', () => {
+    row.remove();
+    autoSave();
+  });
+  row.querySelectorAll('input').forEach(i => i.addEventListener('input', autoSave));
+  container.appendChild(row);
+}
+
+// ─── AUTO-SAVE ────────────────────────────────────────────────────────────────
+let saveTimer;
+function autoSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveForm, 400);
+}
+
+function saveForm() {
+  if (saveBlocked) return;
+  const bench = [];
+  document.querySelectorAll('.bench-row').forEach(row => {
+    bench.push({
+      num: row.querySelector('.bench-num').value,
+      name: row.querySelector('.bench-name').value,
+      pos:  row.querySelector('.bench-pos').value,
+    });
+  });
+
+  const phases = {};
+  for (const ph of PHASES) {
+    if (removedPhases.has(ph.id)) continue;
+    phases[ph.id] = {
+      notes:       (document.getElementById('notes-' + ph.id) || {}).value || '',
+      boardLocked: !!phaseBoards[ph.id],
+    };
+  }
+
+  const data = {
+    teamName:    document.getElementById('team-name').value,
+    opponent:    document.getElementById('opponent').value,
+    matchDate:   document.getElementById('match-date').value,
+    kickoffTime: document.getElementById('kickoff-time').value,
+    venue:       document.getElementById('venue').value,
+    matchTheme:  document.getElementById('match-theme').value,
+    captain:     document.getElementById('captain').value,
+    oppNotes:    document.getElementById('opp-notes').value,
+    lineup:      document.getElementById('lineup').value,
+    bench,
+    age:            parseInt(document.getElementById('age-slider').value),
+    comp:           parseInt(document.getElementById('comp-slider').value),
+    gameFormat:     currentFormat,
+    themeKeepExact: document.getElementById('theme-keep-exact').value,
+    phases,
+    removedPhases:  [...removedPhases],
+  };
+  localStorage.setItem('matchday-report-form', JSON.stringify(data));
+}
+
+let saveBlocked = false;
+
+function loadForm() {
+  const raw = localStorage.getItem('matchday-report-form');
+  if (!raw) return;
+  let loadOk = false;
+  try {
+    const d = JSON.parse(raw);
+    if (d.teamName)    document.getElementById('team-name').value    = d.teamName;
+    if (d.opponent)    document.getElementById('opponent').value      = d.opponent;
+    if (d.matchDate)   document.getElementById('match-date').value   = d.matchDate;
+    if (d.kickoffTime) document.getElementById('kickoff-time').value = d.kickoffTime;
+    if (d.venue)       document.getElementById('venue').value        = d.venue;
+    if (d.matchTheme)  document.getElementById('match-theme').value  = d.matchTheme;
+    if (d.captain)     document.getElementById('captain').value      = d.captain;
+    if (d.oppNotes)    document.getElementById('opp-notes').value    = d.oppNotes;
+    if (d.lineup)      document.getElementById('lineup').value       = d.lineup;
+    if (d.age)         document.getElementById('age-slider').value   = d.age;
+    if (d.comp)        document.getElementById('comp-slider').value  = d.comp;
+    if (d.gameFormat)  applyFormatUI(d.gameFormat);
+    if (d.themeKeepExact === '1') document.getElementById('theme-mode-toggle').click();
+
+    if (d.bench && d.bench.length) {
+      document.getElementById('bench-rows').innerHTML = '';
+      d.bench.forEach(b => addBenchRow(b.num, b.name, b.pos));
+    }
+
+    if (d.phases) {
+      for (const ph of PHASES) {
+        if (!d.phases[ph.id]) continue;
+        const ta = document.getElementById('notes-' + ph.id);
+        if (ta) ta.value = d.phases[ph.id].notes || '';
+      }
+    }
+    loadOk = true;
+  } catch (e) {
+    // Never let a failed restore silently destroy the coach's work: block
+    // autosave so half-loaded (blank) fields can't overwrite what's stored.
+    console.error('loadForm failed — autosave disabled to protect saved work', e);
+    saveBlocked = true;
+    alert('Your saved report could not be fully restored, so saving is paused to protect it. Please reload the page; if this keeps happening, take a screenshot of your notes before editing.');
+  }
+}
+
+// ─── SLIDER DISPLAY ───────────────────────────────────────────────────────────
+const COMP_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
+
+function updateSliders() {
+  const age  = parseInt(document.getElementById('age-slider').value);
+  const comp = parseInt(document.getElementById('comp-slider').value);
+
+  document.getElementById('age-display').textContent  = age >= 19 ? 'Adult' : age;
+  document.getElementById('comp-display').textContent = COMP_LABELS[comp];
+
+  // Colour the range track fill
+  const ageEl  = document.getElementById('age-slider');
+  const compEl = document.getElementById('comp-slider');
+  const agePct  = ((age - 5) / (19 - 5)) * 100;
+  const compPct = ((comp - 1) / 4) * 100;
+  ageEl.style.background  = `linear-gradient(to right, var(--gold) ${agePct}%, var(--border) ${agePct}%)`;
+  compEl.style.background = `linear-gradient(to right, var(--gold) ${compPct}%, var(--border) ${compPct}%)`;
+
+  document.getElementById('lang-preview-text').textContent = getLangPreview(age, comp);
+}
+
+// ─── CHARACTER COUNT ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const themeInput = document.getElementById('match-theme');
+  const charEl     = document.getElementById('theme-char');
+  themeInput.addEventListener('input', () => {
+    const n = themeInput.value.length;
+    charEl.textContent = `${n} / 80`;
+    charEl.classList.toggle('warn', n > 60);
+    autoSave();
+  });
+});
+
+// ─── PREVIEW BUTTON ───────────────────────────────────────────────────────────
+document.getElementById('btn-preview').addEventListener('click', () => {
+  saveForm();
+  // Validate required fields
+  const teamName = document.getElementById('team-name').value.trim();
+  const opponent = document.getElementById('opponent').value.trim();
+  const date     = document.getElementById('match-date').value;
+  if (!teamName || !opponent || !date) {
+    const missing = [];
+    if (!teamName) missing.push('team name');
+    if (!opponent) missing.push('opponent');
+    if (!date)     missing.push('date');
+    alert(`Please fill in: ${missing.join(', ')}.`);
+    return;
+  }
+  // Phase 3 — preview screen (coming next)
+  window.location.href = 'preview.html';
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+buildPhases();
+
+// Default bench rows
+addBenchRow(); addBenchRow(); addBenchRow();
+
+// Set default date (next Saturday) and time
+const sat = nextSaturday();
+document.getElementById('match-date').value   = toDateInput(sat);
+document.getElementById('kickoff-time').value = '09:15';
+
+// Slider events
+document.getElementById('age-slider').addEventListener('input', () => { updateSliders(); autoSave(); });
+document.getElementById('comp-slider').addEventListener('input', () => { updateSliders(); autoSave(); });
+
+// Auto-save on all text inputs
+document.querySelectorAll('input:not([type=range]), textarea').forEach(el => {
+  el.addEventListener('input', autoSave);
+});
+
+// Bench add button
+document.getElementById('btn-add-bench').addEventListener('click', () => {
+  addBenchRow();
+  autoSave();
+});
+
+// Load saved state (if any), then update sliders
+loadForm();
+updateSliders();
+
+// ─── SHARED TACTICS BOARD (for lineup import) ─────────────────────────────────
+let tacticsData = null;
+let tacticsOpen = false;
+
+document.getElementById('tactics-toggle').addEventListener('click', () => {
+  tacticsOpen = !tacticsOpen;
+  document.getElementById('tactics-body').style.display = tacticsOpen ? 'block' : 'none';
+  document.getElementById('tactics-chevron').style.transform = tacticsOpen ? 'rotate(180deg)' : '';
+});
+
+document.getElementById('btn-lock-tactics').addEventListener('click', () => {
+  const iframe = document.getElementById('tactics-iframe');
+  iframe._pendingShared = true;
+  iframe.contentWindow.postMessage('matchday:getState', '*');
+});
+
+document.getElementById('btn-unlock-tactics').addEventListener('click', () => {
+  tacticsData = null;
+  document.getElementById('tactics-locked-banner').style.display = 'none';
+  document.getElementById('tactics-iframe-wrap').style.display = 'block';
+  document.getElementById('btn-lock-tactics').style.display = 'block';
+  autoSave();
+});
+
+// Shared board message handler
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'matchday:tacticsState') return;
+  const sharedIframe = document.getElementById('tactics-iframe');
+  if (sharedIframe && sharedIframe.contentWindow === e.source && sharedIframe._pendingShared) {
+    sharedIframe._pendingShared = false;
+    tacticsData = e.data.data;
+    const savedPhases = (tacticsData.phases || []).filter(Boolean).length;
+    const playerCount = (tacticsData.homePlayers || []).length;
+    const locked = document.getElementById('tactics-locked-banner');
+    document.getElementById('tactics-locked-text').textContent =
+      `${tacticsData.homeFormation} locked in · ${playerCount} players · ${savedPhases} phase${savedPhases !== 1 ? 's' : ''} saved.`;
+    locked.style.display = 'flex';
+    document.getElementById('tactics-iframe-wrap').style.display = 'none';
+    document.getElementById('btn-lock-tactics').style.display = 'none';
+    syncBoardToPhaseBoards(tacticsData);
+    autoSave();
+  }
+});
+
+// ─── GAME FORMAT ─────────────────────────────────────────────────────────────
+function applyFormatUI(fmt) {
+  currentFormat = fmt;
+  localStorage.setItem('matchday-format', fmt);
+  document.querySelectorAll('.format-btn').forEach(b => {
+    const active = b.dataset.format === fmt;
+    b.style.background      = active ? 'var(--gold)' : 'var(--black)';
+    b.style.color           = active ? 'var(--black)' : 'var(--body)';
+    b.style.borderColor     = active ? 'var(--gold)'  : 'var(--border)';
+    b.style.fontWeight      = active ? '700' : '400';
+  });
+  autoSave();
+}
+
+document.querySelectorAll('.format-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    applyFormatUI(b.dataset.format);
+    // Reload any tactics boards so they pick up the new format & formations.
+    document.querySelectorAll('iframe[src^="tactics.html"]').forEach(f => {
+      f.src = f.src;
+    });
+  });
+});
+applyFormatUI(currentFormat);
+
+// ─── THEME KEEP-EXACT TOGGLE ──────────────────────────────────────────────────
+let themeKeepExact = false;
+document.getElementById('theme-mode-toggle').addEventListener('click', () => {
+  themeKeepExact = !themeKeepExact;
+  const knob  = document.getElementById('theme-mode-knob');
+  const label = document.getElementById('theme-mode-label');
+  document.getElementById('theme-keep-exact').value = themeKeepExact ? '1' : '0';
+  document.getElementById('theme-mode-toggle').style.background = themeKeepExact ? 'var(--gold)' : 'var(--border)';
+  knob.style.left  = themeKeepExact ? '18px' : '2px';
+  label.textContent = themeKeepExact
+    ? 'Keep exactly as written — AI will not change this'
+    : 'AI will expand this into the report\'s tone';
+  label.style.color = themeKeepExact ? 'var(--gold)' : 'var(--muted)';
+  autoSave();
+});
+
+// ─── PLAYER SYNC: main board → per-phase boards ───────────────────────────────
+// When the main lineup board is locked, broadcast player names to all open phase boards
+function syncBoardToPhaseBoards(board) {
+  if (!board) return;
+  // Persist the entire locked board so every per-phase board (even ones not yet
+  // opened, or custom sections added later) opens as an exact clone on load.
+  try { localStorage.setItem('matchday-board', JSON.stringify(board)); } catch(e) {}
+  // Push to every already-loaded phase board so open ones update immediately.
+  document.querySelectorAll('.phase-tactics-iframe-wrap iframe').forEach(iframe => {
+    try {
+      iframe.contentWindow.postMessage({ type: 'matchday:setBoard', board }, '*');
+    } catch(e) {}
+  });
+  // Auto-fill the lineup textarea from the home team if it's still empty.
+  const players = board.homePlayers || [];
+  const lineupField = document.getElementById('lineup');
+  if (!lineupField.value.trim() && players.length) {
+    lineupField.value = players
+      .map(p => `${p.n}. ${p.name || p.pos}${p.pos && p.name ? ' (' + p.pos + ')' : ''}`)
+      .join('\n');
+  }
+}
+
+// ─── CUSTOM SECTIONS ──────────────────────────────────────────────────────────
+let customSectionCount = 0;
+const customSections = {}; // id → { title, notes, boardLocked }
+
+document.getElementById('btn-add-custom-section').addEventListener('click', () => {
+  const id = 'custom-' + (++customSectionCount);
+  const card = document.createElement('div');
+  card.className = 'phase-card open';
+  card.id = 'phase-' + id;
+  card.innerHTML = `
+    <div class="phase-header" style="cursor:default">
+      <input
+        class="custom-section-title"
+        type="text"
+        placeholder="Section title…"
+        style="flex:1;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.05em;outline:none;padding-bottom:2px"
+        id="title-${id}"
+      >
+      <button style="background:transparent;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;transition:color .15s" title="Remove section" onclick="this.closest('.phase-card').remove();delete customSections['${id}'];autoSave()">×</button>
+    </div>
+    <div class="phase-body" style="display:block">
+      <div class="phase-body-inner">
+        <span class="phase-notes-label">Coach's instructions</span>
+        <textarea id="notes-${id}" placeholder="Brain dump, bullet points, or a single sentence — the AI will synthesise it"></textarea>
+        <div class="phase-tactics-area">
+          <button class="phase-tactics-toggle" id="tactics-toggle-${id}">
+            <span>⊕ Add tactics board diagram</span>
+          </button>
+          <div class="phase-tactics-iframe-wrap" id="tactics-wrap-${id}">
+            <iframe src="tactics.html?roster=1" data-phase="${id}" title="Tactics Board"></iframe>
+            <button class="phase-lock-btn" id="lock-${id}">Lock In Diagram →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('btn-add-custom-section').insertAdjacentElement('beforebegin', card);
+  customSections[id] = { title: '', notes: '', boardLocked: false };
+
+  card.querySelector('input').addEventListener('input', e => {
+    customSections[id].title = e.target.value;
+    autoSave();
+  });
+  card.querySelector('textarea').addEventListener('input', e => {
+    customSections[id].notes = e.target.value;
+    autoSave();
+  });
+
+  const wrap = card.querySelector('.phase-tactics-iframe-wrap');
+  card.querySelector('.phase-tactics-toggle').addEventListener('click', () => {
+    wrap.classList.toggle('open');
+  });
+  card.querySelector('.phase-lock-btn').addEventListener('click', () => {
+    const iframe = wrap.querySelector('iframe');
+    iframe._pendingPhase = id;
+    iframe.contentWindow.postMessage('matchday:getState', '*');
+  });
+
+  document.getElementById('title-' + id).focus();
+  autoSave();
+});
+</script>
+</body>
+</html>

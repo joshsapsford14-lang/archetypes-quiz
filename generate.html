@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MatchDay — Generating Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --black:    #06080C;
+  --card:     #10161F;
+  --card2:    #0d1219;
+  --border:   #232D3A;
+  --border2:  #1a2330;
+  --gold:     #F0C040;
+  --gold-dim: #B08820;
+  --gold-bg:  rgba(240,192,64,.07);
+  --white:    #F4F6FA;
+  --body:     #D8DFE8;
+  --muted:    #4A5568;
+  --green:    #50F090;
+  --green-bg: rgba(80,240,144,.07);
+  --red:      #FF5050;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--black);
+  color: var(--body);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 100px;
+}
+#app { max-width: 680px; margin: 0 auto; padding: 0 16px; }
+
+/* ── TOP BAR ── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 20px;
+}
+.wordmark { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: .06em; color: var(--white); }
+.wordmark span { color: var(--gold); }
+.back-btn {
+  background: transparent; border: 1px solid var(--border); border-radius: 6px;
+  padding: 6px 12px; color: var(--body); font-size: 12px; font-weight: 500;
+  cursor: pointer; text-decoration: none; transition: all .15s;
+}
+.back-btn:hover { border-color: var(--gold-dim); color: var(--white); }
+
+/* ── API KEY GATE ── */
+/* LIVE INTERACTIVE BOARD (mirrors the exported widget) */
+#live-board { margin-bottom: 26px; }
+.live-board-title { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold); margin-bottom:10px; }
+.phase-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.phase-tab{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--body);cursor:pointer}
+.phase-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08)}
+.board-stage{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);line-height:0}
+.board-stage img{display:block;width:100%;height:auto}
+.hotspot{position:absolute;transform:translate(-50%,-50%);width:min(11%,58px);aspect-ratio:1;border-radius:50%;background:transparent;border:none;cursor:pointer;padding:0}
+.hotspot::after{content:'';position:absolute;inset:14%;border-radius:50%;border:2px solid transparent;transition:border-color .12s}
+.hotspot.has-note::after{border-color:rgba(240,192,64,.55)}
+.hotspot.away.has-note::after{border-color:rgba(120,190,255,.55)}
+.hotspot:active::after,.hotspot.sel::after{border-color:var(--gold)}
+.hotspot.away:active::after,.hotspot.away.sel::after{border-color:#78BEFF}
+.note-card{margin-top:14px;border:1px solid var(--gold-dim);border-radius:12px;background:var(--card);padding:14px 16px}
+.note-card.hidden{display:none}
+.note-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.note-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;background:var(--gold);color:var(--black);border-radius:5px;padding:2px 8px}
+.note-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.03em;color:var(--white)}
+.note-pos{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.note-close{margin-left:auto;background:transparent;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+.note-body{font-size:15px;line-height:1.65;color:var(--body);font-weight:300;margin-top:10px;white-space:pre-wrap}
+.note-body.empty{color:var(--muted);font-style:italic}
+.note-card.is-away{border-color:rgba(120,190,255,.5)}
+.note-card.is-away .note-num{background:#78BEFF}
+.note-card.is-away .note-pos{color:#78BEFF}
+
+#api-key-gate {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  margin-bottom: 20px;
+}
+#api-key-gate h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: .05em;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+#api-key-gate p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+.key-row { display: flex; gap: 8px; }
+.key-row input {
+  flex: 1;
+  background: var(--black);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  color: var(--white);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  outline: none;
+  transition: border-color .15s;
+}
+.key-row input:focus { border-color: var(--gold); }
+.key-row input::placeholder { color: var(--muted); }
+.key-btn {
+  background: var(--gold);
+  border: none;
+  border-radius: 7px;
+  padding: 10px 18px;
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.key-btn:hover { background: #d4a82e; }
+.key-saved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--green);
+  margin-top: 8px;
+}
+
+/* ── MATCH HEADER ── */
+.match-header {
+  margin-bottom: 20px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--border);
+}
+.match-header-vs {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(24px, 6vw, 38px);
+  letter-spacing: .03em;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.match-header-vs span { color: var(--gold); margin: 0 6px; font-size: .6em; vertical-align: middle; }
+.match-header-meta { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; letter-spacing: .06em; }
+
+/* ── PROGRESS ── */
+.progress-bar-wrap {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+#progress-bar {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 2px;
+  width: 0%;
+  transition: width .4s ease;
+}
+
+/* ── SECTION CARDS ── */
+.section-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color .3s;
+}
+.section-card.generating { border-color: rgba(240,192,64,.3); }
+.section-card.done       { border-color: var(--border); }
+.section-card.error      { border-color: rgba(255,80,80,.3); }
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border2);
+}
+.section-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid rgba(240,192,64,.2);
+  border-radius: 4px;
+  padding: 3px 7px;
+}
+.section-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: .05em;
+  color: var(--white);
+  flex: 1;
+}
+.section-status {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+}
+.section-status.waiting  { color: var(--muted); }
+.section-status.active   { color: var(--gold); }
+.section-status.done     { color: var(--green); }
+.section-status.error    { color: var(--red); }
+
+.section-body {
+  padding: 16px 18px;
+  min-height: 60px;
+}
+.section-text {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--body);
+  font-weight: 300;
+}
+.section-text p { margin-bottom: 12px; }
+.section-text p:last-child { margin-bottom: 0; }
+
+/* Typing cursor */
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--gold);
+  vertical-align: text-bottom;
+  margin-left: 1px;
+  animation: blink .7s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.section-waiting-text {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.section-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 16px 12px;
+  gap: 8px;
+}
+.regen-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .08em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.regen-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+.regen-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* ── ERROR STATE ── */
+.error-msg {
+  font-size: 13px;
+  color: var(--red);
+  padding: 10px 0;
+}
+
+/* ── ALL DONE ── */
+#all-done {
+  display: none;
+  background: linear-gradient(135deg, rgba(80,240,144,.06) 0%, var(--card) 100%);
+  border: 1px solid rgba(80,240,144,.2);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  margin-top: 16px;
+}
+#all-done h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: .05em;
+  color: var(--white);
+  margin-bottom: 6px;
+}
+#all-done p { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+.export-btn {
+  background: var(--gold);
+  border: none;
+  border-radius: 10px;
+  color: var(--black);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: .1em;
+  padding: 14px 40px;
+  cursor: pointer;
+  transition: all .15s;
+  box-shadow: 0 4px 24px rgba(240,192,64,.25);
+  display: inline-block;
+}
+.export-btn:hover { background: #d4a82e; transform: translateY(-1px); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top-bar">
+    <div class="wordmark">Match<span>Day</span></div>
+    <a class="back-btn" href="preview.html">← Preview</a>
+  </div>
+
+  <!-- API KEY GATE -->
+  <div id="api-key-gate" style="display:none">
+    <h2>Anthropic API Key</h2>
+    <p>Your key is stored only in this browser. It is never sent anywhere except directly to Anthropic's API.</p>
+    <div class="key-row">
+      <input type="password" id="api-key-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <button class="key-btn" id="btn-save-key">Save & Generate</button>
+    </div>
+    <div class="key-saved" id="key-saved-msg" style="display:none">✓ Key saved</div>
+    <p style="margin-top:18px">Don't need the AI-written sections? You can skip this and export just your interactive tactics board and player notes.</p>
+    <button class="key-btn" id="btn-skip-ai" style="background:transparent;border:1px solid var(--border);color:var(--body)">Skip — export board only →</button>
+  </div>
+
+  <!-- MATCH HEADER -->
+  <div class="match-header" id="match-header" style="display:none">
+    <div class="match-header-vs" id="mh-vs"></div>
+    <div class="match-header-meta" id="mh-meta"></div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar-wrap" id="progress-wrap" style="display:none">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- LIVE INTERACTIVE BOARD (same widget the exported file gets) -->
+  <div id="live-board" style="display:none">
+    <div class="live-board-title">Interactive Board — tap a player to test</div>
+    <div class="phase-tabs" id="phaseTabs"></div>
+    <div class="board-stage" id="boardStage"></div>
+    <div class="note-card hidden" id="noteCard">
+      <div class="note-head">
+        <span class="note-num" id="nNum"></span>
+        <span class="note-name" id="nName"></span>
+        <span class="note-pos" id="nPos"></span>
+        <button class="note-close" id="nClose" aria-label="Close">×</button>
+      </div>
+      <div class="note-body" id="nBody"></div>
+    </div>
+  </div>
+
+  <!-- SECTION CARDS -->
+  <div id="sections-output"></div>
+
+  <!-- ALL DONE -->
+  <div id="all-done">
+    <h3>Report Complete</h3>
+    <p>All sections generated. Export as a standalone HTML file.</p>
+    <button class="export-btn" id="btn-export">Export Report →</button>
+  </div>
+</div>
+
+<script>
+// ─── PHASE DEFINITIONS ───────────────────────────────────────────────────────
+const ALL_PHASES = [
+  { id: 'buildup',      label: 'Buildup',       tag: 'IN POSSESSION'     },
+  { id: 'press',        label: 'Press',          tag: 'OUT OF POSSESSION' },
+  { id: 'rest-defence', label: 'Rest Defence',   tag: 'TRANSITION'        },
+  { id: 'block',        label: 'Block',          tag: 'DEFENSIVE'         },
+  { id: 'mentality',    label: 'Mentality',      tag: 'MINDSET'           },
+];
+
+const COMP_LABELS = ['', 'Very Low', 'Low', 'Medium', 'High', 'Very High'];
+const MODEL = 'claude-sonnet-4-20250514';
+
+// ─── API KEY ─────────────────────────────────────────────────────────────────
+function getApiKey() { return localStorage.getItem('matchday-api-key') || ''; }
+function saveApiKey(k) { localStorage.setItem('matchday-api-key', k.trim()); }
+
+// ─── LOAD FORM DATA ──────────────────────────────────────────────────────────
+let formData = {};
+try {
+  const raw = localStorage.getItem('matchday-report-form');
+  if (raw) formData = JSON.parse(raw);
+} catch(e) {}
+
+// Only generate sections the coach actually kept — exclude any they removed on
+// the report page. Delete every phase and PHASES is empty (board-only report).
+const _removed = new Set(formData.removedPhases || []);
+const PHASES = ALL_PHASES.filter(ph => !_removed.has(ph.id));
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const generated = {}; // phaseId → text
+let generating = false;
+let skipAI = false;   // coach chose to export the board without AI sections
+
+// ─── PROMPT BUILDER ──────────────────────────────────────────────────────────
+function buildPrompt(phase) {
+  const age     = formData.age  || 12;
+  const comp    = formData.comp || 3;
+  const compLbl = COMP_LABELS[comp] || 'Medium';
+  const notes   = (formData.phases?.[phase.id]?.notes || '').trim();
+  const ageStr  = age >= 19 ? 'adult players' : `${age}-year-old players`;
+  const fmt     = localStorage.getItem('matchday-format') || '9';
+  const fmtStr  = fmt === '7' ? '7-a-side (7v7)' : fmt === '9' ? '9-a-side (9v9)' : '11-a-side (11v11)';
+  const theme   = (formData.matchTheme || '').trim();
+  const keepTheme = formData.themeKeepExact === '1' || formData.themeKeepExact === 1;
+
+  const sectionPurpose = {
+    buildup:        'how the team builds play from the goalkeeper and defence — passing patterns, who receives, when to play long',
+    press:          'how and when the team presses out of possession — the triggers, the shape, who leads it and who covers',
+    'rest-defence': 'the team\'s defensive shape when the ball is in the opponent\'s attacking half but not won back — compactness, positioning, holding the line',
+    block:          'the team\'s deep defensive shape when the opposition is building — how deep the line sits, how compact the unit stays, when to hold and when to step',
+    mentality:      'the mindset and attitude the team carries into the match — body language, response to setbacks, energy, leadership and what a good performance looks like today',
+  }[phase.id] || phase.label;
+
+  const themeInstruction = theme
+    ? keepTheme
+      ? `MATCH THEME (use verbatim — do not alter a single word): "${theme}"`
+      : `MATCH THEME (this is the emotional and tactical tone of the entire report — every section must connect back to it): "${theme}"`
+    : '';
+
+  return `You are writing one section of a pre-match football report. The coach has written rough notes and you must expand them into polished, flowing prose.
+
+MATCH CONTEXT
+Team: ${formData.teamName || 'Our team'}
+Opponent: ${formData.opponent || 'Opposition'}
+Game format: ${fmtStr}
+${formData.matchDate ? `Date: ${formData.matchDate}` : ''}
+${formData.venue ? `Venue: ${formData.venue}` : ''}
+${formData.captain ? `Captain: ${formData.captain}` : ''}
+${themeInstruction}
+
+OPPOSITION SCOUTING
+${formData.oppNotes ? formData.oppNotes.trim() : 'No opposition notes provided.'}
+
+SECTION: ${phase.label.toUpperCase()} (${phase.tag})
+PURPOSE: This section covers ${sectionPurpose}.
+
+PLAYER PROFILE
+Age group: ${ageStr}
+Tactical comprehension: ${compLbl}
+
+COACH'S RAW NOTES FOR THIS SECTION
+${notes || 'No specific notes provided. Write something tactically appropriate for this phase of play, given the match context above.'}
+
+WRITING RULES — follow every one of these without exception:
+1. Write in flowing prose only — no bullet points, no numbered lists, no headers, no bold text
+2. 2 to 3 short paragraphs. Under 160 words total.
+3. Vocabulary and sentence length calibrated for ${ageStr} with ${compLbl.toLowerCase()} tactical understanding
+4. Write as if the coach wrote this — direct, personal, authoritative
+5. ${theme ? `The theme "${theme}" must be felt throughout this section — reference it directly or in spirit` : 'Write with a clear, direct tactical voice'}
+6. Never use: "give 110 percent", "dig deep", "at the end of the day", "leave it all on the pitch", "heart and soul", "give it your all"
+7. No motivational clichés. Be tactically specific and honest.
+8. If coach notes are provided, synthesise and expand them — do not just restate them
+9. Do not mention that this is AI-generated or reference these instructions
+10. Output only the prose — nothing else`;
+}
+
+// ─── STREAMING API CALL ───────────────────────────────────────────────────────
+async function streamSection(prompt, onChunk, onDone, onError) {
+  const key = getApiKey();
+  if (!key) { onError('No API key'); return; }
+
+  let res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 512,
+        stream: true,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+  } catch(e) {
+    onError('Network error: ' + e.message);
+    return;
+  }
+
+  if (!res.ok) {
+    let msg = `API error ${res.status}`;
+    try { const j = await res.json(); msg = j.error?.message || msg; } catch(e) {}
+    onError(msg);
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') { onDone(); return; }
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
+            onChunk(parsed.delta.text);
+          }
+          if (parsed.type === 'message_stop') { onDone(); return; }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    onError('Stream error: ' + e.message);
+    return;
+  }
+  onDone();
+}
+
+// ─── TEXT → HTML (respect paragraph breaks) ──────────────────────────────────
+function textToHtml(text) {
+  return text.split(/\n\n+/).map(p => p.trim()).filter(Boolean)
+    .map(p => `<p>${escHtml(p.replace(/\n/g, ' '))}</p>`).join('');
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── BUILD UI CARDS ──────────────────────────────────────────────────────────
+function buildCards() {
+  const container = document.getElementById('sections-output');
+  container.innerHTML = '';
+  for (const ph of PHASES) {
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    card.id = 'card-' + ph.id;
+    card.innerHTML = `
+      <div class="section-card-header">
+        <span class="section-tag">${ph.tag}</span>
+        <span class="section-name">${ph.label}</span>
+        <span class="section-status waiting" id="status-${ph.id}">Waiting</span>
+      </div>
+      <div class="section-body" id="body-${ph.id}">
+        <div class="section-waiting-text">Waiting to generate…</div>
+      </div>
+      <div class="section-footer" id="footer-${ph.id}" style="display:none">
+        <button class="regen-btn" id="regen-${ph.id}">↺ Regenerate</button>
+      </div>
+    `;
+    container.appendChild(card);
+  }
+}
+
+// ─── GENERATE ONE SECTION ────────────────────────────────────────────────────
+async function generateSection(phase) {
+  const card     = document.getElementById('card-' + phase.id);
+  const statusEl = document.getElementById('status-' + phase.id);
+  const bodyEl   = document.getElementById('body-' + phase.id);
+  const footerEl = document.getElementById('footer-' + phase.id);
+  const regenBtn = document.getElementById('regen-' + phase.id);
+
+  card.className    = 'section-card generating';
+  statusEl.className = 'section-status active';
+  statusEl.textContent = 'Writing…';
+  bodyEl.innerHTML  = '<span class="cursor"></span>';
+  footerEl.style.display = 'none';
+
+  const prompt = buildPrompt(phase);
+  let text = '';
+
+  await new Promise(resolve => {
+    streamSection(
+      prompt,
+      chunk => {
+        text += chunk;
+        // Render live text with trailing cursor
+        const html = textToHtml(text);
+        // Replace last </p> with cursor inside it
+        bodyEl.innerHTML = html.replace(/<\/p>$/, '<span class="cursor"></span></p>');
+      },
+      () => {
+        // Done
+        generated[phase.id] = text;
+        bodyEl.innerHTML = `<div class="section-text">${textToHtml(text)}</div>`;
+        card.className = 'section-card done';
+        statusEl.className = 'section-status done';
+        statusEl.textContent = '✓ Done';
+        footerEl.style.display = 'flex';
+        regenBtn.disabled = false;
+        regenBtn.addEventListener('click', () => regenerate(phase));
+        resolve();
+      },
+      err => {
+        bodyEl.innerHTML = `<div class="error-msg">Error: ${escHtml(err)}</div>`;
+        card.className = 'section-card error';
+        statusEl.className = 'section-status error';
+        statusEl.textContent = '✗ Error';
+        footerEl.style.display = 'flex';
+        regenBtn.textContent = '↺ Retry';
+        regenBtn.disabled = false;
+        regenBtn.addEventListener('click', () => regenerate(phase));
+        resolve();
+      }
+    );
+  });
+}
+
+async function regenerate(phase) {
+  const regenBtn = document.getElementById('regen-' + phase.id);
+  regenBtn.disabled = true;
+  await generateSection(phase);
+  updateProgress();
+  checkAllDone();
+}
+
+// ─── PROGRESS ────────────────────────────────────────────────────────────────
+function updateProgress() {
+  const done  = Object.keys(generated).length;
+  const total = PHASES.length;
+  document.getElementById('progress-bar').style.width = (total ? done / total * 100 : 100) + '%';
+}
+
+function checkAllDone() {
+  const allDone = PHASES.every(ph => generated[ph.id]);
+  if (allDone) {
+    if (!PHASES.length) {
+      document.querySelector('#all-done p').textContent =
+        'Your lineup board and player roles are ready. Export as a standalone HTML file.';
+    }
+    document.getElementById('all-done').style.display = 'block';
+  }
+}
+
+// ─── BOARD COLLECTION (shared by the live page widget and the export) ────────
+const PHASE_META = { buildup:'Buildup', press:'Press', 'rest-defence':'Rest Defence', block:'Block' };
+
+function getLockedBoard() {
+  try { return JSON.parse(localStorage.getItem('matchday-board') || 'null'); } catch(e) { return null; }
+}
+
+// Both teams are clickable — your players and the opposition.
+function mapSide(arr, team) {
+  return (arr || []).map(p => ({
+    n: p.n, name: (p.name || '').trim(), pos: (p.pos || '').trim(),
+    notes: (p.notes || '').trim(), team,
+    fx: typeof p.fx === 'number' ? p.fx : p.pnx,
+    fy: typeof p.fy === 'number' ? p.fy : p.pny,
+  }));
+}
+function clickablePlayers(b) {
+  return b ? mapSide(b.homePlayers, 'home').concat(mapSide(b.awayPlayers, 'away')) : [];
+}
+
+function collectBoards(data) {
+  const board = getLockedBoard();
+  let phaseStore = {};
+  try { phaseStore = JSON.parse(localStorage.getItem('matchday-phase-boards') || '{}'); } catch(e) {}
+  const removedSet = new Set((data && data.removedPhases) || []);
+  const out = [];
+  if (board && board.snapshot) out.push({ id:'lineup', label:'Lineup', img:board.snapshot, players:clickablePlayers(board) });
+  for (const pid of Object.keys(PHASE_META)) {
+    if (removedSet.has(pid)) continue;
+    const pb = phaseStore[pid];
+    if (pb && pb.snapshot) out.push({ id:pid, label:PHASE_META[pid], img:pb.snapshot, players:clickablePlayers(pb) });
+  }
+  return out;
+}
+
+// ─── LIVE BOARD ON THIS PAGE (same behaviour as the exported widget) ─────────
+function initLiveBoard() {
+  const BOARDS = collectBoards(formData);
+  const wrap = document.getElementById('live-board');
+  const stage = document.getElementById('boardStage');
+  if (!wrap || !stage || !BOARDS.length) return;
+  wrap.style.display = 'block';
+  const tabsEl = document.getElementById('phaseTabs');
+  const card = document.getElementById('noteCard');
+  const nNum = document.getElementById('nNum'), nName = document.getElementById('nName');
+  const nPos = document.getElementById('nPos'), nBody = document.getElementById('nBody');
+
+  function showNote(pl, btn) {
+    nNum.textContent = pl.n != null ? pl.n : '';
+    nName.textContent = pl.name || 'Unnamed';
+    nPos.textContent = [pl.pos || '', pl.team === 'away' ? 'OPPOSITION' : ''].filter(Boolean).join(' · ');
+    card.classList.toggle('is-away', pl.team === 'away');
+    if (pl.notes) { nBody.textContent = pl.notes; nBody.classList.remove('empty'); }
+    else { nBody.textContent = 'No notes for this player in this phase.'; nBody.classList.add('empty'); }
+    card.classList.remove('hidden');
+    stage.querySelectorAll('.hotspot.sel').forEach(h => h.classList.remove('sel'));
+    if (btn) btn.classList.add('sel');
+  }
+
+  function renderBoard(i) {
+    const b = BOARDS[i];
+    stage.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = b.img; img.alt = b.label + ' board';
+    stage.appendChild(img);
+    (b.players || []).forEach(pl => {
+      const btn = document.createElement('button');
+      btn.className = 'hotspot' + (pl.notes ? ' has-note' : '') + (pl.team === 'away' ? ' away' : '');
+      btn.style.left = (pl.fx * 100) + '%';
+      btn.style.top  = (pl.fy * 100) + '%';
+      btn.title = pl.name || ('#' + pl.n);
+      btn.addEventListener('click', () => showNote(pl, btn));
+      stage.appendChild(btn);
+    });
+    card.classList.add('hidden');
+    if (tabsEl) tabsEl.querySelectorAll('.phase-tab').forEach((t, ti) => t.classList.toggle('active', ti === i));
+  }
+
+  if (tabsEl) {
+    tabsEl.innerHTML = '';
+    if (BOARDS.length > 1) {
+      BOARDS.forEach((b, i) => {
+        const t = document.createElement('button');
+        t.className = 'phase-tab'; t.textContent = b.label;
+        t.addEventListener('click', () => renderBoard(i));
+        tabsEl.appendChild(t);
+      });
+    }
+  }
+  const closeBtn = document.getElementById('nClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => {
+    card.classList.add('hidden');
+    stage.querySelectorAll('.hotspot.sel').forEach(h => h.classList.remove('sel'));
+  });
+  renderBoard(0);
+}
+
+// ─── EXPORT HTML ─────────────────────────────────────────────────────────────
+function exportReport() {
+  const data  = formData;
+  const age   = data.age  || 12;
+  const comp  = data.comp || 3;
+
+  function formatDate(ds) {
+    if (!ds) return '';
+    const d = new Date(ds + 'T00:00:00');
+    return d.toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  function formatTime(ts) {
+    if (!ts) return '';
+    const [h, m] = ts.split(':').map(Number);
+    return `${h % 12 || 12}:${String(m).padStart(2,'0')}${h >= 12 ? 'pm' : 'am'}`;
+  }
+
+  const kickoff = new Date((data.matchDate || '') + 'T' + (data.kickoffTime || '09:15') + ':00');
+
+  const phaseSections = PHASES.map(ph => {
+    // Prefer the AI-written prose, but if it wasn't generated (skipped, or the
+    // API errored) fall back to the coach's own notes, exported word-for-word.
+    const text = generated[ph.id] || (data.phases?.[ph.id]?.notes || '').trim();
+    if (!text) return '';
+    return `
+    <section class="report-section">
+      <div class="section-label">${ph.tag}</div>
+      <h2>${ph.label}</h2>
+      <div class="section-prose">${textToHtml(text)}</div>
+    </section>`;
+  }).join('');
+
+  // ── INTERACTIVE MULTI-PHASE BOARD ──────────────────────────────────────────
+  const board = getLockedBoard();
+  const BOARDS = collectBoards(data);
+
+  let boardHtml = '';
+  const boardDataJson = JSON.stringify(BOARDS).replace(/</g, '\\u003c');
+  if (BOARDS.length) {
+    // Readable role list for the lineup board (scan-friendly companion to the tap UI).
+    const roleRow = (p, away) => `
+        <div class="role-item${away ? ' away' : ''}">
+          <span class="role-num">${escHtml(String(p.n || ''))}</span>
+          <div class="role-body">
+            <div class="role-head"><span class="role-name">${escHtml(p.name || 'Unnamed')}</span>${p.pos ? `<span class="role-pos">${escHtml(p.pos)}</span>` : ''}${away ? '<span class="role-pos opp">OPPOSITION</span>' : ''}</div>
+            ${p.notes && p.notes.trim() ? `<div class="role-notes">${escHtml(p.notes)}</div>` : ''}
+          </div>
+        </div>`;
+    const named = arr => (arr || []).filter(p => (p.name && p.name.trim()) || (p.notes && p.notes.trim()));
+    const noteItems =
+      named(board && board.homePlayers).map(p => roleRow(p, false)).join('') +
+      named(board && board.awayPlayers).map(p => roleRow(p, true)).join('');
+    boardHtml = `
+    <section class="report-section">
+      <div class="section-label">TACTICS BOARD</div>
+      <h2>Interactive Lineup</h2>
+      <p class="board-hint">Tap any player — either team — to see their role and notes${BOARDS.length > 1 ? ' — switch phases with the tabs' : ''}.</p>
+      ${BOARDS.length > 1 ? `<div class="phase-tabs" id="phaseTabs"></div>` : ''}
+      <div class="board-stage" id="boardStage"></div>
+      <div class="note-card hidden" id="noteCard">
+        <div class="note-head">
+          <span class="note-num" id="nNum"></span>
+          <span class="note-name" id="nName"></span>
+          <span class="note-pos" id="nPos"></span>
+          <button class="note-close" id="nClose" aria-label="Close">×</button>
+        </div>
+        <div class="note-body" id="nBody"></div>
+      </div>
+      ${noteItems ? `<details class="roles-toggle"><summary>All player roles</summary><div class="role-list">${noteItems}</div></details>` : ''}
+    </section>`;
+  }
+
+  const lineupLines = (data.lineup || '').trim().split('\n').filter(Boolean);
+  // If we have the visual board with roles, don't also print the text lineup.
+  const lineupHtml = (lineupLines.length && !boardHtml)
+    ? `<section class="report-section">
+        <div class="section-label">SQUAD</div>
+        <h2>Starting Lineup</h2>
+        <div class="lineup-list">${lineupLines.map(l => `<div class="lineup-item">${escHtml(l)}</div>`).join('')}</div>
+      </section>`
+    : '';
+
+  const benchItems = (data.bench || []).filter(b => b.name);
+  const benchHtml = benchItems.length
+    ? `<div class="bench-list">${benchItems.map(b => `<div class="bench-item"><span class="bench-num">${escHtml(b.num || '—')}</span><span>${escHtml(b.name)}</span>${b.pos ? `<span class="bench-pos">${escHtml(b.pos)}</span>` : ''}</div>`).join('')}</div>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escHtml(data.teamName || 'MatchDay')} vs ${escHtml(data.opponent || '')} — Match Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root{--black:#06080C;--card:#10161F;--border:#232D3A;--gold:#F0C040;--gold-dim:#B08820;--white:#F4F6FA;--body:#D8DFE8;--muted:#4A5568}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:60px}
+.container{max-width:680px;margin:0 auto;padding:0 16px}
+
+/* HERO */
+.hero{padding:40px 0 32px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.hero-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.hero-vs{font-family:'Bebas Neue',sans-serif;font-size:clamp(36px,9vw,64px);letter-spacing:.02em;color:var(--white);line-height:.95;margin-bottom:16px}
+.hero-vs .sep{color:var(--gold);font-size:.55em;margin:0 8px;vertical-align:middle}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.hero-pill{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:999px;border:1px solid var(--border);color:var(--body);background:var(--card)}
+.hero-pill.gold{border-color:rgba(240,192,64,.3);color:var(--gold);background:rgba(240,192,64,.07)}
+.countdown{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.1em;color:var(--muted);margin-top:8px}
+.theme-badge{display:inline-block;background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--white);font-weight:500;font-style:italic;margin-top:12px;line-height:1.4}
+.theme-badge::before{content:'"';color:var(--gold);font-style:normal;font-family:'Bebas Neue',sans-serif;font-size:18px;vertical-align:-2px;margin-right:2px}
+.theme-badge::after{content:'"';color:var(--gold);font-style:normal;font-family:'Bebas Neue',sans-serif;font-size:18px;vertical-align:-2px;margin-left:2px}
+
+/* SECTIONS */
+.report-section{padding:28px 0;border-bottom:1px solid var(--border)}
+.report-section:last-child{border-bottom:none}
+.section-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
+.report-section h2{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.04em;color:var(--white);margin-bottom:14px}
+.section-prose p{font-size:15px;line-height:1.72;color:var(--body);font-weight:300;margin-bottom:12px}
+.section-prose p:last-child{margin-bottom:0}
+
+/* TACTICS BOARD + ROLES */
+.board-img{margin:4px 0 18px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
+.board-img img{display:block;width:100%;height:auto}
+.board-hint{font-size:13px;color:var(--muted);margin-bottom:12px}
+.phase-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.phase-tab{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--body);cursor:pointer}
+.phase-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08)}
+.board-stage{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);line-height:0}
+.board-stage img{display:block;width:100%;height:auto}
+.hotspot{position:absolute;transform:translate(-50%,-50%);width:min(11%,58px);aspect-ratio:1;border-radius:50%;background:transparent;border:none;cursor:pointer;padding:0}
+.hotspot::after{content:'';position:absolute;inset:14%;border-radius:50%;border:2px solid transparent;transition:border-color .12s}
+.hotspot.has-note::after{border-color:rgba(240,192,64,.55)}
+.hotspot.away.has-note::after{border-color:rgba(120,190,255,.55)}
+.hotspot:active::after,.hotspot.sel::after{border-color:var(--gold)}
+.hotspot.away:active::after,.hotspot.away.sel::after{border-color:#78BEFF}
+.note-card.is-away{border-color:rgba(120,190,255,.5)}
+.note-card.is-away .note-num{background:#78BEFF}
+.note-card.is-away .note-pos{color:#78BEFF}
+.note-card{margin-top:14px;border:1px solid var(--gold-dim);border-radius:12px;background:var(--card);padding:14px 16px}
+.note-card.hidden{display:none}
+.note-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.note-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;background:var(--gold);color:var(--black);border-radius:5px;padding:2px 8px}
+.note-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.03em;color:var(--white)}
+.note-pos{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.note-close{margin-left:auto;background:transparent;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+.note-body{font-size:15px;line-height:1.65;color:var(--body);font-weight:300;margin-top:10px;white-space:pre-wrap}
+.note-body.empty{color:var(--muted);font-style:italic}
+.roles-toggle{margin-top:18px;border-top:1px solid var(--border);padding-top:12px}
+.roles-toggle summary{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);cursor:pointer;list-style:none}
+.roles-toggle summary::-webkit-details-marker{display:none}
+.roles-toggle[open] summary{margin-bottom:12px}
+.role-list{display:flex;flex-direction:column;gap:2px}
+.role-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.role-item:last-child{border-bottom:none}
+.role-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;background:var(--gold);color:var(--black);border-radius:5px;padding:2px 8px;height:fit-content;flex-shrink:0}
+.role-body{flex:1;min-width:0}
+.role-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.role-name{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.03em;color:var(--white)}
+.role-pos{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.role-item.away .role-num{background:#78BEFF}
+.role-pos.opp{color:#78BEFF}
+.role-notes{font-size:14px;line-height:1.6;color:var(--body);font-weight:300;margin-top:5px;white-space:pre-wrap}
+
+/* LINEUP */
+.lineup-list{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.lineup-item{font-size:14px;color:var(--body);padding:6px 0;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;letter-spacing:.03em}
+.lineup-item:last-child{border-bottom:none}
+.bench-list{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.bench-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:4px 0}
+.bench-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);width:20px}
+.bench-pos{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-left:auto}
+
+/* FOOTER */
+.report-footer{padding:24px 0;text-align:center;border-top:1px solid var(--border);margin-top:8px}
+.report-footer-brand{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.1em;color:var(--muted)}
+.report-footer-brand span{color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="hero-eyebrow">Pre-Match Report</div>
+    <div class="hero-vs">
+      ${escHtml(data.teamName || 'Our Team')}<span class="sep">vs</span>${escHtml(data.opponent || 'Opposition')}
+    </div>
+    <div class="hero-meta">
+      ${data.matchDate ? `<span class="hero-pill gold">${formatDate(data.matchDate)}</span>` : ''}
+      ${data.kickoffTime ? `<span class="hero-pill">⏱ ${formatTime(data.kickoffTime)}</span>` : ''}
+      ${data.venue ? `<span class="hero-pill">📍 ${escHtml(data.venue)}</span>` : ''}
+      ${data.captain ? `<span class="hero-pill">© ${escHtml(data.captain)}</span>` : ''}
+    </div>
+    ${data.matchTheme ? `<div class="theme-badge">${escHtml(data.matchTheme)}</div>` : ''}
+    <div class="countdown" id="countdown"></div>
+  </div>
+
+  ${boardHtml}
+  ${phaseSections}
+  ${lineupHtml}
+  ${benchHtml ? `<section class="report-section"><div class="section-label">BENCH</div><h2>Substitutes</h2>${benchHtml}</section>` : ''}
+
+  <div class="report-footer">
+    <div class="report-footer-brand">Match<span>Day</span></div>
+  </div>
+</div>
+<script>
+// Interactive tactics board — tap a player to see their notes; tabs switch phase.
+(function(){
+  const BOARDS = ${boardDataJson};
+  const stage = document.getElementById('boardStage');
+  if (!stage || !BOARDS.length) return;
+  const tabsEl = document.getElementById('phaseTabs');
+  const card = document.getElementById('noteCard');
+  const nNum = document.getElementById('nNum'), nName = document.getElementById('nName');
+  const nPos = document.getElementById('nPos'), nBody = document.getElementById('nBody');
+  let active = 0;
+
+  function showNote(pl, btn){
+    nNum.textContent = pl.n != null ? pl.n : '';
+    nName.textContent = pl.name || 'Unnamed';
+    nPos.textContent = [pl.pos || '', pl.team === 'away' ? 'OPPOSITION' : ''].filter(Boolean).join(' · ');
+    card.classList.toggle('is-away', pl.team === 'away');
+    if (pl.notes){ nBody.textContent = pl.notes; nBody.classList.remove('empty'); }
+    else { nBody.textContent = 'No notes for this player in this phase.'; nBody.classList.add('empty'); }
+    card.classList.remove('hidden');
+    stage.querySelectorAll('.hotspot.sel').forEach(h=>h.classList.remove('sel'));
+    if (btn) btn.classList.add('sel');
+    card.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  function renderBoard(i){
+    active = i;
+    const b = BOARDS[i];
+    stage.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = b.img; img.alt = b.label + ' board';
+    stage.appendChild(img);
+    (b.players||[]).forEach(pl => {
+      const btn = document.createElement('button');
+      btn.className = 'hotspot' + (pl.notes ? ' has-note' : '') + (pl.team === 'away' ? ' away' : '');
+      btn.style.left = (pl.fx*100) + '%';
+      btn.style.top  = (pl.fy*100) + '%';
+      btn.title = pl.name || ('#'+pl.n);
+      btn.addEventListener('click', () => showNote(pl, btn));
+      stage.appendChild(btn);
+    });
+    card.classList.add('hidden');
+    if (tabsEl) tabsEl.querySelectorAll('.phase-tab').forEach((t,ti)=>t.classList.toggle('active', ti===i));
+  }
+
+  if (tabsEl && BOARDS.length > 1){
+    BOARDS.forEach((b,i)=>{
+      const t = document.createElement('button');
+      t.className = 'phase-tab'; t.textContent = b.label;
+      t.addEventListener('click', ()=>renderBoard(i));
+      tabsEl.appendChild(t);
+    });
+  }
+  const closeBtn = document.getElementById('nClose');
+  if (closeBtn) closeBtn.addEventListener('click', ()=>{ card.classList.add('hidden'); stage.querySelectorAll('.hotspot.sel').forEach(h=>h.classList.remove('sel')); });
+  renderBoard(0);
+})();
+
+// Countdown to kickoff
+(function(){
+  const kickoff = new Date('${kickoff.toISOString()}');
+  const el = document.getElementById('countdown');
+  function update(){
+    const diff = kickoff - Date.now();
+    if(diff <= 0){el.textContent='Kickoff';return}
+    const h=Math.floor(diff/3600000),m=Math.floor(diff%3600000/60000);
+    el.textContent = h>0 ? h+'h '+m+'m to kickoff' : m+'m to kickoff';
+    setTimeout(update,30000);
+  }
+  update();
+})();
+<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `matchday-${(data.teamName || 'report').toLowerCase().replace(/\s+/g,'-')}-vs-${(data.opponent || 'opp').toLowerCase().replace(/\s+/g,'-')}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  // No tactical phases to write (coach kept only the lineup board) — no AI or
+  // API key needed, just show the board report ready to export.
+  if (!PHASES.length) { start(); return; }
+  // Check for API key
+  const key = getApiKey();
+  if (!key) {
+    document.getElementById('api-key-gate').style.display = 'block';
+
+    document.getElementById('btn-save-key').addEventListener('click', () => {
+      const k = document.getElementById('api-key-input').value.trim();
+      if (!k.startsWith('sk-')) { alert('That doesn\'t look like an Anthropic API key.'); return; }
+      saveApiKey(k);
+      document.getElementById('api-key-gate').style.display = 'none';
+      start();
+    });
+
+    document.getElementById('api-key-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-save-key').click();
+    });
+
+    document.getElementById('btn-skip-ai').addEventListener('click', () => {
+      skipAI = true;
+      document.getElementById('api-key-gate').style.display = 'none';
+      start();
+    });
+    return;
+  }
+  start();
+}
+
+async function start() {
+  // Show match header
+  const mhVs = document.getElementById('mh-vs');
+  mhVs.innerHTML = `${escHtml(formData.teamName || 'Our Team')} <span>vs</span> ${escHtml(formData.opponent || 'Opposition')}`;
+  document.getElementById('mh-meta').textContent = [
+    formData.matchDate ? new Date(formData.matchDate + 'T00:00:00').toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short'}) : '',
+    formData.kickoffTime || '',
+    formData.venue || '',
+  ].filter(Boolean).join(' · ');
+  document.getElementById('match-header').style.display = 'block';
+  initLiveBoard();
+  // No phases, or coach skipped AI: nothing to generate, hide progress.
+  const willGenerate = PHASES.length && !skipAI;
+  document.getElementById('progress-wrap').style.display = willGenerate ? 'block' : 'none';
+
+  if (willGenerate) {
+    buildCards();
+    for (const phase of PHASES) {
+      await generateSection(phase);
+      updateProgress();
+    }
+  }
+
+  revealExport();
+}
+
+// Always let the coach export once generation has run — even if some (or all)
+// AI sections errored, the board, roles and any successful text are exportable.
+function revealExport() {
+  const total  = PHASES.length;
+  const done   = PHASES.filter(ph => generated[ph.id]).length;
+  const failed = total - done;
+  const p = document.querySelector('#all-done p');
+  const h = document.querySelector('#all-done h3');
+  if (skipAI || !total) {
+    h.textContent = 'Report Ready';
+    p.textContent = 'Your lineup board and player roles are ready. Export as a standalone HTML file.';
+  } else if (failed === 0) {
+    h.textContent = 'Report Complete';
+    p.textContent = 'All sections generated. Export as a standalone HTML file.';
+  } else if (done === 0) {
+    h.textContent = 'Export Ready';
+    p.textContent = 'No AI rewriting happened — your notes will be exported exactly as you wrote them, along with your tactics board and player roles.';
+  } else {
+    h.textContent = 'Export Ready';
+    p.textContent = `${done} of ${total} sections generated. You can export now, or retry the failed sections above first.`;
+  }
+  document.getElementById('all-done').style.display = 'block';
+}
+
+document.getElementById('btn-export').addEventListener('click', exportReport);
+
+init();
+</script>
+</body>
+</html>
