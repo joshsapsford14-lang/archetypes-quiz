@@ -50,6 +50,33 @@ body {
 .back-btn:hover { border-color: var(--gold-dim); color: var(--white); }
 
 /* ── API KEY GATE ── */
+/* LIVE INTERACTIVE BOARD (mirrors the exported widget) */
+#live-board { margin-bottom: 26px; }
+.live-board-title { font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold); margin-bottom:10px; }
+.phase-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.phase-tab{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--body);cursor:pointer}
+.phase-tab.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08)}
+.board-stage{position:relative;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card);line-height:0}
+.board-stage img{display:block;width:100%;height:auto}
+.hotspot{position:absolute;transform:translate(-50%,-50%);width:min(11%,58px);aspect-ratio:1;border-radius:50%;background:transparent;border:none;cursor:pointer;padding:0}
+.hotspot::after{content:'';position:absolute;inset:14%;border-radius:50%;border:2px solid transparent;transition:border-color .12s}
+.hotspot.has-note::after{border-color:rgba(240,192,64,.55)}
+.hotspot.away.has-note::after{border-color:rgba(120,190,255,.55)}
+.hotspot:active::after,.hotspot.sel::after{border-color:var(--gold)}
+.hotspot.away:active::after,.hotspot.away.sel::after{border-color:#78BEFF}
+.note-card{margin-top:14px;border:1px solid var(--gold-dim);border-radius:12px;background:var(--card);padding:14px 16px}
+.note-card.hidden{display:none}
+.note-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.note-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;background:var(--gold);color:var(--black);border-radius:5px;padding:2px 8px}
+.note-name{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.03em;color:var(--white)}
+.note-pos{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.note-close{margin-left:auto;background:transparent;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
+.note-body{font-size:15px;line-height:1.65;color:var(--body);font-weight:300;margin-top:10px;white-space:pre-wrap}
+.note-body.empty{color:var(--muted);font-style:italic}
+.note-card.is-away{border-color:rgba(120,190,255,.5)}
+.note-card.is-away .note-num{background:#78BEFF}
+.note-card.is-away .note-pos{color:#78BEFF}
+
 #api-key-gate {
   background: var(--card);
   border: 1px solid var(--border);
@@ -308,6 +335,22 @@ body {
   <!-- PROGRESS -->
   <div class="progress-bar-wrap" id="progress-wrap" style="display:none">
     <div id="progress-bar"></div>
+  </div>
+
+  <!-- LIVE INTERACTIVE BOARD (same widget the exported file gets) -->
+  <div id="live-board" style="display:none">
+    <div class="live-board-title">Interactive Board — tap a player to test</div>
+    <div class="phase-tabs" id="phaseTabs"></div>
+    <div class="board-stage" id="boardStage"></div>
+    <div class="note-card hidden" id="noteCard">
+      <div class="note-head">
+        <span class="note-num" id="nNum"></span>
+        <span class="note-name" id="nName"></span>
+        <span class="note-pos" id="nPos"></span>
+        <button class="note-close" id="nClose" aria-label="Close">×</button>
+      </div>
+      <div class="note-body" id="nBody"></div>
+    </div>
   </div>
 
   <!-- SECTION CARDS -->
@@ -597,6 +640,103 @@ function checkAllDone() {
   }
 }
 
+// ─── BOARD COLLECTION (shared by the live page widget and the export) ────────
+const PHASE_META = { buildup:'Buildup', press:'Press', 'rest-defence':'Rest Defence', block:'Block' };
+
+function getLockedBoard() {
+  try { return JSON.parse(localStorage.getItem('matchday-board') || 'null'); } catch(e) { return null; }
+}
+
+// Both teams are clickable — your players and the opposition.
+function mapSide(arr, team) {
+  return (arr || []).map(p => ({
+    n: p.n, name: (p.name || '').trim(), pos: (p.pos || '').trim(),
+    notes: (p.notes || '').trim(), team,
+    fx: typeof p.fx === 'number' ? p.fx : p.pnx,
+    fy: typeof p.fy === 'number' ? p.fy : p.pny,
+  }));
+}
+function clickablePlayers(b) {
+  return b ? mapSide(b.homePlayers, 'home').concat(mapSide(b.awayPlayers, 'away')) : [];
+}
+
+function collectBoards(data) {
+  const board = getLockedBoard();
+  let phaseStore = {};
+  try { phaseStore = JSON.parse(localStorage.getItem('matchday-phase-boards') || '{}'); } catch(e) {}
+  const removedSet = new Set((data && data.removedPhases) || []);
+  const out = [];
+  if (board && board.snapshot) out.push({ id:'lineup', label:'Lineup', img:board.snapshot, players:clickablePlayers(board) });
+  for (const pid of Object.keys(PHASE_META)) {
+    if (removedSet.has(pid)) continue;
+    const pb = phaseStore[pid];
+    if (pb && pb.snapshot) out.push({ id:pid, label:PHASE_META[pid], img:pb.snapshot, players:clickablePlayers(pb) });
+  }
+  return out;
+}
+
+// ─── LIVE BOARD ON THIS PAGE (same behaviour as the exported widget) ─────────
+function initLiveBoard() {
+  const BOARDS = collectBoards(formData);
+  const wrap = document.getElementById('live-board');
+  const stage = document.getElementById('boardStage');
+  if (!wrap || !stage || !BOARDS.length) return;
+  wrap.style.display = 'block';
+  const tabsEl = document.getElementById('phaseTabs');
+  const card = document.getElementById('noteCard');
+  const nNum = document.getElementById('nNum'), nName = document.getElementById('nName');
+  const nPos = document.getElementById('nPos'), nBody = document.getElementById('nBody');
+
+  function showNote(pl, btn) {
+    nNum.textContent = pl.n != null ? pl.n : '';
+    nName.textContent = pl.name || 'Unnamed';
+    nPos.textContent = [pl.pos || '', pl.team === 'away' ? 'OPPOSITION' : ''].filter(Boolean).join(' · ');
+    card.classList.toggle('is-away', pl.team === 'away');
+    if (pl.notes) { nBody.textContent = pl.notes; nBody.classList.remove('empty'); }
+    else { nBody.textContent = 'No notes for this player in this phase.'; nBody.classList.add('empty'); }
+    card.classList.remove('hidden');
+    stage.querySelectorAll('.hotspot.sel').forEach(h => h.classList.remove('sel'));
+    if (btn) btn.classList.add('sel');
+  }
+
+  function renderBoard(i) {
+    const b = BOARDS[i];
+    stage.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = b.img; img.alt = b.label + ' board';
+    stage.appendChild(img);
+    (b.players || []).forEach(pl => {
+      const btn = document.createElement('button');
+      btn.className = 'hotspot' + (pl.notes ? ' has-note' : '') + (pl.team === 'away' ? ' away' : '');
+      btn.style.left = (pl.fx * 100) + '%';
+      btn.style.top  = (pl.fy * 100) + '%';
+      btn.title = pl.name || ('#' + pl.n);
+      btn.addEventListener('click', () => showNote(pl, btn));
+      stage.appendChild(btn);
+    });
+    card.classList.add('hidden');
+    if (tabsEl) tabsEl.querySelectorAll('.phase-tab').forEach((t, ti) => t.classList.toggle('active', ti === i));
+  }
+
+  if (tabsEl) {
+    tabsEl.innerHTML = '';
+    if (BOARDS.length > 1) {
+      BOARDS.forEach((b, i) => {
+        const t = document.createElement('button');
+        t.className = 'phase-tab'; t.textContent = b.label;
+        t.addEventListener('click', () => renderBoard(i));
+        tabsEl.appendChild(t);
+      });
+    }
+  }
+  const closeBtn = document.getElementById('nClose');
+  if (closeBtn) closeBtn.addEventListener('click', () => {
+    card.classList.add('hidden');
+    stage.querySelectorAll('.hotspot.sel').forEach(h => h.classList.remove('sel'));
+  });
+  renderBoard(0);
+}
+
 // ─── EXPORT HTML ─────────────────────────────────────────────────────────────
 function exportReport() {
   const data  = formData;
@@ -630,50 +770,30 @@ function exportReport() {
   }).join('');
 
   // ── INTERACTIVE MULTI-PHASE BOARD ──────────────────────────────────────────
-  // Collect every locked board (main lineup + any per-phase boards like Press /
-  // Buildup) into a data structure the exported file renders as an interactive,
-  // tap-a-player-to-see-notes widget with phase tabs. Fully self-contained.
-  let board = null;
-  try { board = JSON.parse(localStorage.getItem('matchday-board') || 'null'); } catch(e) {}
-  let phaseStore = {};
-  try { phaseStore = JSON.parse(localStorage.getItem('matchday-phase-boards') || '{}'); } catch(e) {}
-  const removedSet = new Set(data.removedPhases || []);
-
-  const clickable = b => (b && b.homePlayers ? b.homePlayers : []).map(p => ({
-    n: p.n, name: (p.name || '').trim(), pos: (p.pos || '').trim(),
-    notes: (p.notes || '').trim(),
-    fx: typeof p.fx === 'number' ? p.fx : p.pnx,
-    fy: typeof p.fy === 'number' ? p.fy : p.pny,
-  }));
-
-  const PHASE_META = { buildup:'Buildup', press:'Press', 'rest-defence':'Rest Defence', block:'Block' };
-  const BOARDS = [];
-  if (board && board.snapshot) BOARDS.push({ id:'lineup', label:'Lineup', img:board.snapshot, players:clickable(board) });
-  for (const pid of Object.keys(PHASE_META)) {
-    if (removedSet.has(pid)) continue;
-    const pb = phaseStore[pid];
-    if (pb && pb.snapshot) BOARDS.push({ id:pid, label:PHASE_META[pid], img:pb.snapshot, players:clickable(pb) });
-  }
+  const board = getLockedBoard();
+  const BOARDS = collectBoards(data);
 
   let boardHtml = '';
   const boardDataJson = JSON.stringify(BOARDS).replace(/</g, '\\u003c');
   if (BOARDS.length) {
     // Readable role list for the lineup board (scan-friendly companion to the tap UI).
-    const noteItems = (board && board.homePlayers ? board.homePlayers : [])
-      .filter(p => (p.name && p.name.trim()) || (p.notes && p.notes.trim()))
-      .map(p => `
-        <div class="role-item">
+    const roleRow = (p, away) => `
+        <div class="role-item${away ? ' away' : ''}">
           <span class="role-num">${escHtml(String(p.n || ''))}</span>
           <div class="role-body">
-            <div class="role-head"><span class="role-name">${escHtml(p.name || 'Unnamed')}</span>${p.pos ? `<span class="role-pos">${escHtml(p.pos)}</span>` : ''}</div>
+            <div class="role-head"><span class="role-name">${escHtml(p.name || 'Unnamed')}</span>${p.pos ? `<span class="role-pos">${escHtml(p.pos)}</span>` : ''}${away ? '<span class="role-pos opp">OPPOSITION</span>' : ''}</div>
             ${p.notes && p.notes.trim() ? `<div class="role-notes">${escHtml(p.notes)}</div>` : ''}
           </div>
-        </div>`).join('');
+        </div>`;
+    const named = arr => (arr || []).filter(p => (p.name && p.name.trim()) || (p.notes && p.notes.trim()));
+    const noteItems =
+      named(board && board.homePlayers).map(p => roleRow(p, false)).join('') +
+      named(board && board.awayPlayers).map(p => roleRow(p, true)).join('');
     boardHtml = `
     <section class="report-section">
       <div class="section-label">TACTICS BOARD</div>
       <h2>Interactive Lineup</h2>
-      <p class="board-hint">Tap any player to see their role and notes${BOARDS.length > 1 ? ' — switch phases with the tabs' : ''}.</p>
+      <p class="board-hint">Tap any player — either team — to see their role and notes${BOARDS.length > 1 ? ' — switch phases with the tabs' : ''}.</p>
       ${BOARDS.length > 1 ? `<div class="phase-tabs" id="phaseTabs"></div>` : ''}
       <div class="board-stage" id="boardStage"></div>
       <div class="note-card hidden" id="noteCard">
@@ -751,7 +871,12 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
 .hotspot{position:absolute;transform:translate(-50%,-50%);width:min(11%,58px);aspect-ratio:1;border-radius:50%;background:transparent;border:none;cursor:pointer;padding:0}
 .hotspot::after{content:'';position:absolute;inset:14%;border-radius:50%;border:2px solid transparent;transition:border-color .12s}
 .hotspot.has-note::after{border-color:rgba(240,192,64,.55)}
+.hotspot.away.has-note::after{border-color:rgba(120,190,255,.55)}
 .hotspot:active::after,.hotspot.sel::after{border-color:var(--gold)}
+.hotspot.away:active::after,.hotspot.away.sel::after{border-color:#78BEFF}
+.note-card.is-away{border-color:rgba(120,190,255,.5)}
+.note-card.is-away .note-num{background:#78BEFF}
+.note-card.is-away .note-pos{color:#78BEFF}
 .note-card{margin-top:14px;border:1px solid var(--gold-dim);border-radius:12px;background:var(--card);padding:14px 16px}
 .note-card.hidden{display:none}
 .note-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -773,6 +898,8 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
 .role-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .role-name{font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:.03em;color:var(--white)}
 .role-pos{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+.role-item.away .role-num{background:#78BEFF}
+.role-pos.opp{color:#78BEFF}
 .role-notes{font-size:14px;line-height:1.6;color:var(--body);font-weight:300;margin-top:5px;white-space:pre-wrap}
 
 /* LINEUP */
@@ -831,7 +958,8 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
   function showNote(pl, btn){
     nNum.textContent = pl.n != null ? pl.n : '';
     nName.textContent = pl.name || 'Unnamed';
-    nPos.textContent = pl.pos || '';
+    nPos.textContent = [pl.pos || '', pl.team === 'away' ? 'OPPOSITION' : ''].filter(Boolean).join(' · ');
+    card.classList.toggle('is-away', pl.team === 'away');
     if (pl.notes){ nBody.textContent = pl.notes; nBody.classList.remove('empty'); }
     else { nBody.textContent = 'No notes for this player in this phase.'; nBody.classList.add('empty'); }
     card.classList.remove('hidden');
@@ -849,7 +977,7 @@ body{background:var(--black);color:var(--body);font-family:'DM Sans',sans-serif;
     stage.appendChild(img);
     (b.players||[]).forEach(pl => {
       const btn = document.createElement('button');
-      btn.className = 'hotspot' + (pl.notes ? ' has-note' : '');
+      btn.className = 'hotspot' + (pl.notes ? ' has-note' : '') + (pl.team === 'away' ? ' away' : '');
       btn.style.left = (pl.fx*100) + '%';
       btn.style.top  = (pl.fy*100) + '%';
       btn.title = pl.name || ('#'+pl.n);
@@ -940,6 +1068,7 @@ async function start() {
     formData.venue || '',
   ].filter(Boolean).join(' · ');
   document.getElementById('match-header').style.display = 'block';
+  initLiveBoard();
   // No phases, or coach skipped AI: nothing to generate, hide progress.
   const willGenerate = PHASES.length && !skipAI;
   document.getElementById('progress-wrap').style.display = willGenerate ? 'block' : 'none';

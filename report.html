@@ -828,6 +828,12 @@ function getLangPreview(age, comp) {
 
 // ─── BUILD TACTICAL PHASES ────────────────────────────────────────────────────
 // Each phase: coach notes textarea + optional per-phase tactics board
+// Declared up here on purpose: loadForm() calls applyFormatUI(), which assigns
+// to currentFormat. If this lived further down, that assignment would hit the
+// temporal dead zone, throw inside loadForm's catch, and leave the coach's
+// saved notes unrestored — which autosave would then overwrite with blanks.
+let currentFormat = localStorage.getItem('matchday-format') || '9';
+
 const phaseBoards = {}; // id → locked tactics state
 
 // Sections the coach has removed (persisted across reloads).
@@ -978,6 +984,7 @@ function autoSave() {
 }
 
 function saveForm() {
+  if (saveBlocked) return;
   const bench = [];
   document.querySelectorAll('.bench-row').forEach(row => {
     bench.push({
@@ -1017,9 +1024,12 @@ function saveForm() {
   localStorage.setItem('matchday-report-form', JSON.stringify(data));
 }
 
+let saveBlocked = false;
+
 function loadForm() {
   const raw = localStorage.getItem('matchday-report-form');
   if (!raw) return;
+  let loadOk = false;
   try {
     const d = JSON.parse(raw);
     if (d.teamName)    document.getElementById('team-name').value    = d.teamName;
@@ -1048,7 +1058,14 @@ function loadForm() {
         if (ta) ta.value = d.phases[ph.id].notes || '';
       }
     }
-  } catch (e) { /* ignore corrupt data */ }
+    loadOk = true;
+  } catch (e) {
+    // Never let a failed restore silently destroy the coach's work: block
+    // autosave so half-loaded (blank) fields can't overwrite what's stored.
+    console.error('loadForm failed — autosave disabled to protect saved work', e);
+    saveBlocked = true;
+    alert('Your saved report could not be fully restored, so saving is paused to protect it. Please reload the page; if this keeps happening, take a screenshot of your notes before editing.');
+  }
 }
 
 // ─── SLIDER DISPLAY ───────────────────────────────────────────────────────────
@@ -1178,8 +1195,6 @@ window.addEventListener('message', e => {
 });
 
 // ─── GAME FORMAT ─────────────────────────────────────────────────────────────
-let currentFormat = localStorage.getItem('matchday-format') || '9';
-
 function applyFormatUI(fmt) {
   currentFormat = fmt;
   localStorage.setItem('matchday-format', fmt);
